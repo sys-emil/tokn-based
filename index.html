@@ -1,1309 +1,1155 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tokn Based</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <style>
-        *, *::before, *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        :root {
-            --text-primary:   #111111;
-            --text-secondary: #6b7280;
-            --text-tertiary:  #9ca3af;
-            --border:         #e5e7eb;
-            --border-focus:   #111111;
-            --bg:             #ffffff;
-            --bg-subtle:      #f9fafb;
-            --accent:         #111111;
-            --accent-hover:   #374151;
-            --danger:         #dc2626;
-            --success:        #16a34a;
-            --font:           'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            --mono:           'SF Mono', 'Fira Code', 'Fira Mono', monospace;
-        }
-
-        html { font-size: 15px; }
-
-        body {
-            font-family: var(--font);
-            background: var(--bg);
-            color: var(--text-primary);
-            -webkit-font-smoothing: antialiased;
-            min-height: 100vh;
-        }
-
-        /* ── Top bar ── */
-        .topbar {
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            background: rgba(255,255,255,0.85);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--border);
-            padding: 0 32px;
-            height: 52px;
-            display: grid;
-            grid-template-columns: 1fr auto 1fr;
-            align-items: center;
-        }
-
-        .topbar-logo {
-            font-weight: 600;
-            font-size: 0.95rem;
-            letter-spacing: -0.01em;
-            color: var(--text-primary);
-        }
-
-        .topbar-logo span {
-            color: var(--text-tertiary);
-            font-weight: 400;
-        }
-
-        /* ── Tab navigation ── */
-        .tab-nav {
-            display: flex;
-            align-items: center;
-            gap: 0;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            overflow: hidden;
-        }
-
-        .tab {
-            padding: 6px 18px;
-            font-family: var(--font);
-            font-size: 0.8rem;
-            font-weight: 500;
-            color: var(--text-secondary);
-            background: var(--bg);
-            border: none;
-            cursor: pointer;
-            transition: background 0.15s, color 0.15s;
-            border-right: 1px solid var(--border);
-        }
-
-        .tab:last-child { border-right: none; }
-
-        .tab:hover { background: var(--bg-subtle); color: var(--text-primary); }
-
-        .tab.active {
-            background: var(--accent);
-            color: #ffffff;
-        }
-
-        .wallet-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            justify-content: flex-end;
-        }
-
-        .wallet-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: var(--border);
-            flex-shrink: 0;
-            transition: background 0.3s;
-        }
-
-        .wallet-dot.connected { background: var(--success); }
-
-        .wallet-address {
-            font-family: var(--mono);
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-        }
-
-        /* ── Page layout ── */
-        .page {
-            max-width: 560px;
-            margin: 0 auto;
-            padding: 64px 24px 120px;
-        }
-
-        /* ── View switching ── */
-        .view { display: none; }
-        .view.active { display: block; }
-
-        /* ── Page header ── */
-        .page-header {
-            margin-bottom: 56px;
-        }
-
-        .page-header h1 {
-            font-size: 1.75rem;
-            font-weight: 600;
-            letter-spacing: -0.03em;
-            line-height: 1.2;
-            color: var(--text-primary);
-        }
-
-        .page-header p {
-            margin-top: 8px;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            line-height: 1.5;
-        }
-
-        /* Connect button */
-        #connectBtn {
-            margin-top: 20px;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 9px 18px;
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            font-family: var(--font);
-            font-size: 0.85rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background 0.15s;
-        }
-
-        #connectBtn:hover { background: var(--accent-hover); }
-        #connectBtn:disabled { background: var(--bg-subtle); color: var(--text-tertiary); cursor: default; border: 1px solid var(--border); }
-
-        .owner-tag {
-            display: none;
-            margin-top: 10px;
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-        }
-        .owner-tag.visible { display: block; }
-        .owner-tag strong { color: var(--text-primary); }
-
-        /* ── Sections ── */
-        .section {
-            padding: 32px 0;
-            border-top: 1px solid var(--border);
-        }
-
-        .section-label {
-            font-size: 0.7rem;
-            font-weight: 600;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: var(--text-tertiary);
-            margin-bottom: 4px;
-        }
-
-        .section-title {
-            font-size: 1rem;
-            font-weight: 600;
-            letter-spacing: -0.01em;
-            color: var(--text-primary);
-            margin-bottom: 20px;
-        }
-
-        .restricted-note {
-            display: inline-block;
-            font-size: 0.7rem;
-            font-weight: 500;
-            color: var(--text-tertiary);
-            border: 1px solid var(--border);
-            border-radius: 3px;
-            padding: 1px 6px;
-            margin-left: 8px;
-            vertical-align: middle;
-            letter-spacing: 0;
-            text-transform: none;
-        }
-
-        /* ── Form fields ── */
-        .field {
-            margin-bottom: 12px;
-        }
-
-        .field label {
-            display: block;
-            font-size: 0.78rem;
-            font-weight: 500;
-            color: var(--text-secondary);
-            margin-bottom: 5px;
-        }
-
-        .field input {
-            width: 100%;
-            padding: 9px 12px;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            font-family: var(--font);
-            font-size: 0.875rem;
-            color: var(--text-primary);
-            transition: border-color 0.15s, box-shadow 0.15s;
-            outline: none;
-        }
-
-        .field input::placeholder { color: var(--text-tertiary); }
-
-        .field input:focus {
-            border-color: var(--border-focus);
-            box-shadow: 0 0 0 3px rgba(17,17,17,0.06);
-        }
-
-        .field input.mono {
-            font-family: var(--mono);
-            font-size: 0.8rem;
-        }
-
-        /* ── Buttons ── */
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            padding: 9px 16px;
-            border-radius: 4px;
-            font-family: var(--font);
-            font-size: 0.875rem;
-            font-weight: 500;
-            cursor: pointer;
-            border: none;
-            transition: background 0.15s, color 0.15s, opacity 0.15s;
-            width: 100%;
-            margin-top: 4px;
-        }
-
-        .btn-primary {
-            background: var(--accent);
-            color: #ffffff;
-        }
-
-        .btn-primary:hover { background: var(--accent-hover); }
-
-        .btn-danger {
-            background: var(--bg);
-            color: var(--danger);
-            border: 1px solid #fca5a5;
-        }
-
-        .btn-danger:hover { background: #fff1f1; border-color: var(--danger); }
-
-        .btn:disabled {
-            opacity: 0.4;
-            cursor: default;
-        }
-
-        /* ── Inline result ── */
-        .result {
-            display: none;
-            margin-top: 12px;
-            padding: 12px 14px;
-            border-radius: 4px;
-            font-size: 0.82rem;
-            line-height: 1.6;
-            border: 1px solid var(--border);
-            background: var(--bg-subtle);
-            animation: fadeIn 0.15s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-4px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-
-        .result.success { border-color: #bbf7d0; background: #f0fdf4; }
-        .result.error   { border-color: #fecaca; background: #fff5f5; }
-        .result.pending { border-color: var(--border); background: var(--bg-subtle); }
-
-        .result-row {
-            display: flex;
-            gap: 8px;
-            margin-top: 4px;
-        }
-
-        .result-row:first-child { margin-top: 0; }
-
-        .result-key {
-            color: var(--text-tertiary);
-            flex-shrink: 0;
-            width: 88px;
-            font-size: 0.78rem;
-        }
-
-        .result-val {
-            color: var(--text-primary);
-            word-break: break-all;
-        }
-
-        .result-val.mono {
-            font-family: var(--mono);
-            font-size: 0.78rem;
-        }
-
-        .result-status {
-            font-weight: 600;
-            margin-bottom: 6px;
-        }
-
-        .result-status.ok  { color: var(--success); }
-        .result-status.bad { color: var(--danger); }
-        .result-status.mid { color: var(--text-secondary); }
-
-        /* ── Spinner ── */
-        .spinner {
-            display: inline-block;
-            width: 13px;
-            height: 13px;
-            border: 2px solid currentColor;
-            border-top-color: transparent;
-            border-radius: 50%;
-            animation: spin 0.6s linear infinite;
-            opacity: 0.5;
-        }
-
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* ── Doorman view ── */
-        .doorman-input-area {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .doorman-id-field input {
-            width: 100%;
-            padding: 18px 20px;
-            font-size: 2rem;
-            font-weight: 600;
-            letter-spacing: -0.02em;
-            text-align: center;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            font-family: var(--font);
-            color: var(--text-primary);
-            outline: none;
-            transition: border-color 0.15s, box-shadow 0.15s;
-            /* remove browser number input arrows */
-            -moz-appearance: textfield;
-        }
-
-        .doorman-id-field input::-webkit-outer-spin-button,
-        .doorman-id-field input::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-        }
-
-        .doorman-id-field input::placeholder {
-            color: var(--text-tertiary);
-            font-weight: 400;
-        }
-
-        .doorman-id-field input:focus {
-            border-color: var(--border-focus);
-            box-shadow: 0 0 0 3px rgba(17,17,17,0.06);
-        }
-
-        /* ── Verify banner (big visual result for doorman) ── */
-        .verify-banner {
-            display: none;
-            margin-top: 20px;
-            border-radius: 8px;
-            padding: 44px 24px 36px;
-            text-align: center;
-            animation: fadeIn 0.2s ease;
-        }
-
-        .verify-banner.valid {
-            background: #f0fdf4;
-            border: 2px solid var(--success);
-        }
-
-        .verify-banner.invalid {
-            background: #fff5f5;
-            border: 2px solid var(--danger);
-        }
-
-        .verify-banner.checking {
-            background: var(--bg-subtle);
-            border: 2px solid var(--border);
-        }
-
-        .verify-icon {
-            font-size: 2.8rem;
-            line-height: 1;
-            margin-bottom: 10px;
-        }
-
-        .verify-status-text {
-            font-size: 1.6rem;
-            font-weight: 700;
-            letter-spacing: -0.02em;
-            margin-bottom: 18px;
-        }
-
-        .verify-status-text.ok  { color: var(--success); }
-        .verify-status-text.bad { color: var(--danger); }
-        .verify-status-text.mid { color: var(--text-secondary); }
-
-        .verify-meta {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-        }
-
-        .verify-meta-row {
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .verify-meta-key {
-            color: var(--text-tertiary);
-            width: 72px;
-            text-align: right;
-            flex-shrink: 0;
-        }
-
-        .verify-meta-val {
-            color: var(--text-primary);
-            font-weight: 500;
-            text-align: left;
-            word-break: break-all;
-        }
-
-        .verify-meta-val.mono {
-            font-family: var(--mono);
-            font-size: 0.78rem;
-            font-weight: 400;
-        }
-
-        /* ── Ticket cards (Meine Tickets) ── */
-        .tickets-connect-prompt {
-            padding: 40px 0;
-            text-align: center;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        .tickets-connect-prompt button {
-            margin-top: 16px;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 9px 18px;
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            font-family: var(--font);
-            font-size: 0.85rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background 0.15s;
-        }
-
-        .tickets-connect-prompt button:hover { background: var(--accent-hover); }
-
-        .tickets-loading {
-            display: none;
-            padding: 32px 0;
-            color: var(--text-tertiary);
-            font-size: 0.85rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .ticket-list {
-            display: flex;
-            flex-direction: column;
-            gap: 0;
-        }
-
-        .ticket-card {
-            padding: 20px 0;
-            border-top: 1px solid var(--border);
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 16px;
-            animation: fadeIn 0.15s ease;
-        }
-
-        .ticket-card:last-child {
-            border-bottom: 1px solid var(--border);
-        }
-
-        .ticket-card-left {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .ticket-id {
-            font-size: 0.72rem;
-            font-weight: 600;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            color: var(--text-tertiary);
-            font-family: var(--mono);
-        }
-
-        .ticket-event {
-            font-size: 0.95rem;
-            font-weight: 500;
-            color: var(--text-primary);
-            letter-spacing: -0.01em;
-        }
-
-        .ticket-badge {
-            flex-shrink: 0;
-            font-size: 0.72rem;
-            font-weight: 600;
-            padding: 3px 9px;
-            border-radius: 20px;
-            letter-spacing: 0.03em;
-        }
-
-        .ticket-badge.valid {
-            background: #dcfce7;
-            color: var(--success);
-        }
-
-        .ticket-badge.invalid {
-            background: #fee2e2;
-            color: var(--danger);
-        }
-
-        .tickets-empty {
-            display: none;
-            padding: 48px 0;
-            text-align: center;
-            color: var(--text-tertiary);
-            font-size: 0.875rem;
-        }
-
-        /* ── QR Code box ── */
-        .qr-box {
-            display: none;
-            margin-top: 16px;
-            padding: 20px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            background: var(--bg-subtle);
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-            animation: fadeIn 0.2s ease;
-        }
-
-        .qr-box.visible {
-            display: flex;
-        }
-
-        .qr-box canvas,
-        .qr-box img {
-            display: block;
-            border-radius: 4px;
-        }
-
-        .qr-label {
-            font-size: 0.75rem;
-            color: var(--text-tertiary);
-            font-family: var(--mono);
-        }
-
-        /* ── Footer ── */
-        .footer {
-            margin-top: 72px;
-            padding-top: 24px;
-            border-top: 1px solid var(--border);
-            font-size: 0.75rem;
-            color: var(--text-tertiary);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .footer a {
-            color: var(--text-tertiary);
-            text-decoration: none;
-        }
-
-        .footer a:hover { color: var(--text-primary); }
-    </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tokn Based</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+:root {
+  --hue: 285;
+  --ink:        oklch(0.20 0.02 275);
+  --ink-2:      oklch(0.36 0.02 275);
+  --ink-3:      oklch(0.54 0.015 275);
+  --ink-4:      oklch(0.68 0.012 275);
+  --line:       oklch(0.93 0.006 275);
+  --line-2:     oklch(0.88 0.008 275);
+  --surface:    #ffffff;
+  --surface-2:  oklch(0.987 0.004 280);
+  --surface-3:  oklch(0.97 0.008 280);
+  --accent:     oklch(0.54 0.22 var(--hue));
+  --accent-2:   oklch(0.46 0.24 var(--hue));
+  --accent-ink: oklch(0.30 0.18 var(--hue));
+  --accent-wash:oklch(0.97 0.035 var(--hue));
+  --accent-line:oklch(0.90 0.04 var(--hue));
+  --ok:         oklch(0.62 0.15 150);
+  --ok-wash:    oklch(0.96 0.04 150);
+  --warn:       oklch(0.68 0.17 70);
+  --warn-wash:  oklch(0.96 0.05 70);
+  --bad:        oklch(0.56 0.20 25);
+  --bad-wash:   oklch(0.96 0.04 25);
+
+  --radius-sm: 6px;
+  --radius:    10px;
+  --radius-lg: 14px;
+  --shadow-sm: 0 1px 0 oklch(0.88 0.008 275 / 0.6);
+  --shadow:    0 1px 2px rgba(17,20,45,0.04), 0 2px 12px rgba(17,20,45,0.04);
+  --shadow-lg: 0 8px 32px rgba(17,20,45,0.08), 0 2px 6px rgba(17,20,45,0.04);
+
+  --font: 'Geist', ui-sans-serif, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font);
+  color: var(--ink);
+  background: var(--surface-2);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "ss01","cv11";
+}
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+input, textarea, select { font-family: inherit; color: inherit; }
+a { color: inherit; text-decoration: none; }
+
+/* Aurora */
+.aurora {
+  position: absolute;
+  inset: -40% -10% auto -10%;
+  height: 520px;
+  pointer-events: none;
+  filter: blur(70px) saturate(1.1);
+  opacity: 0.75;
+  z-index: 0;
+}
+.aurora::before, .aurora::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+}
+.aurora::before {
+  left: 8%; top: 10%;
+  width: 520px; height: 520px;
+  background: radial-gradient(circle at 30% 30%, oklch(0.80 0.18 var(--hue)) 0%, transparent 60%);
+}
+.aurora::after {
+  right: 4%; top: -5%;
+  width: 620px; height: 620px;
+  background:
+    radial-gradient(circle at 70% 40%, oklch(0.80 0.16 calc(var(--hue) + 40)) 0%, transparent 55%),
+    radial-gradient(circle at 40% 80%, oklch(0.82 0.14 calc(var(--hue) - 40)) 0%, transparent 55%);
+}
+
+/* App shell */
+.app { min-height: 100vh; display: flex; flex-direction: column; }
+
+/* Top bar */
+.topbar {
+  position: sticky; top: 0; z-index: 40;
+  background: color-mix(in oklab, var(--surface) 82%, transparent);
+  backdrop-filter: saturate(1.3) blur(14px);
+  -webkit-backdrop-filter: saturate(1.3) blur(14px);
+  border-bottom: 1px solid var(--line);
+}
+.topbar-inner {
+  max-width: 1240px; margin: 0 auto;
+  padding: 0 24px; height: 60px;
+  display: flex; align-items: center; gap: 24px;
+}
+.logo {
+  display: flex; align-items: center; gap: 10px;
+  font-weight: 600; letter-spacing: -0.02em; font-size: 15px;
+}
+.logo-mark {
+  width: 26px; height: 26px; border-radius: 7px;
+  background: linear-gradient(135deg, var(--accent) 0%, oklch(0.64 0.22 calc(var(--hue) + 30)) 100%);
+  position: relative;
+  box-shadow: 0 1px 2px rgba(17,20,45,0.2), inset 0 1px 0 rgba(255,255,255,0.25);
+}
+.logo-mark::after {
+  content: ""; position: absolute; inset: 5px;
+  border-radius: 3px;
+  background: white;
+  opacity: 0.95;
+  -webkit-mask: repeating-linear-gradient(90deg, #000 0 2px, transparent 2px 4px);
+          mask: repeating-linear-gradient(90deg, #000 0 2px, transparent 2px 4px);
+}
+.logo b { font-weight: 600; }
+.logo span { color: var(--ink-3); font-weight: 500; margin-left: 2px; }
+
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+/* Role switcher */
+.role-switcher {
+  display: inline-flex; background: var(--surface-2);
+  border: 1px solid var(--line); border-radius: 10px; padding: 3px;
+}
+.role-switcher button {
+  padding: 6px 12px; font-size: 12.5px; font-weight: 500;
+  color: var(--ink-3); border-radius: 7px;
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: all 0.15s;
+}
+.role-switcher button.active {
+  background: var(--surface); color: var(--ink);
+  box-shadow: 0 1px 2px rgba(17,20,45,0.06), 0 0 0 1px var(--line);
+}
+.role-switcher .dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--ink-4);
+}
+.role-switcher button.active .dot { background: var(--accent); }
+
+/* Main */
+.main { flex: 1; position: relative; }
+.container { max-width: 1240px; margin: 0 auto; padding: 40px 24px 96px; position: relative; z-index: 1; }
+
+/* Hero */
+.hero {
+  position: relative;
+  padding: 48px 0 40px;
+  margin-bottom: 28px;
+}
+.hero h1 {
+  font-size: 40px; letter-spacing: -0.035em; font-weight: 600;
+  line-height: 1.05;
+}
+.hero .eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--accent-ink); font-weight: 500;
+  background: var(--accent-wash); border: 1px solid var(--accent-line);
+  padding: 4px 10px; border-radius: 999px; margin-bottom: 16px;
+}
+.hero .eyebrow .pulse {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 0 var(--accent);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%   { box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 60%, transparent); }
+  70%  { box-shadow: 0 0 0 8px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.hero p.lead {
+  margin-top: 12px; color: var(--ink-3); font-size: 16px; max-width: 560px; line-height: 1.55;
+}
+
+/* Primary button */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 14px; border-radius: 8px;
+  font-size: 13.5px; font-weight: 500; letter-spacing: -0.005em;
+  border: 1px solid transparent; transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn.primary {
+  background: var(--accent); color: white;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.18), 0 1px 2px oklch(0.40 0.18 var(--hue) / 0.35);
+}
+.btn.primary:hover { background: var(--accent-2); }
+.btn.primary:disabled { opacity: 0.5; cursor: default; }
+.btn.ghost {
+  background: var(--surface); color: var(--ink);
+  border-color: var(--line-2);
+  box-shadow: var(--shadow-sm);
+}
+.btn.ghost:hover { background: var(--surface-2); }
+.btn.danger {
+  background: var(--surface); color: var(--bad);
+  border-color: oklch(0.82 0.08 25);
+}
+.btn.danger:hover { background: var(--bad-wash); }
+.btn.subtle { color: var(--ink-3); }
+.btn.subtle:hover { color: var(--ink); background: var(--surface-2); }
+.btn.sm { padding: 6px 10px; font-size: 12.5px; }
+.btn.lg { padding: 12px 18px; font-size: 14.5px; border-radius: 10px; }
+.btn-full { width: 100%; justify-content: center; }
+
+/* Card */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+.card-header {
+  padding: 18px 22px; border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.card-header h3 { font-size: 14.5px; font-weight: 600; letter-spacing: -0.01em; }
+.card-header .sub { font-size: 12.5px; color: var(--ink-3); margin-top: 2px; }
+.card-body { padding: 22px; }
+
+/* Section spacing */
+section + section { margin-top: 20px; }
+
+/* Chips */
+.chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 8px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 500; letter-spacing: -0.005em;
+  border: 1px solid var(--line);
+  background: var(--surface-2); color: var(--ink-3);
+}
+.chip .d { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-4); }
+.chip.ok { background: var(--ok-wash); color: oklch(0.38 0.12 150); border-color: oklch(0.86 0.08 150); }
+.chip.ok .d { background: var(--ok); }
+.chip.bad { background: var(--bad-wash); color: oklch(0.38 0.14 25); border-color: oklch(0.86 0.10 25); }
+.chip.bad .d { background: var(--bad); }
+.chip.accent { background: var(--accent-wash); color: var(--accent-ink); border-color: var(--accent-line); }
+.chip.accent .d { background: var(--accent); }
+
+/* Form */
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.field:last-child { margin-bottom: 0; }
+.field label { font-size: 12.5px; font-weight: 500; color: var(--ink-2); }
+.input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  font-size: 13.5px;
+  background: var(--surface);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  font-feature-settings: "ss01";
+}
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 16%, transparent);
+}
+.input::placeholder { color: var(--ink-4); }
+.input-mono { font-family: var(--mono); font-size: 12.5px; }
+
+/* Utilities */
+.row { display: flex; align-items: center; }
+.gap-2 { gap: 8px; }
+.muted { color: var(--ink-3); }
+
+/* Mobile canvas (door + attendee background) */
+.mobile-canvas {
+  min-height: calc(100vh - 60px);
+  padding: 48px 20px 80px;
+  background:
+    radial-gradient(1000px 500px at 50% -10%, var(--accent-wash), transparent 60%),
+    var(--surface-2);
+}
+
+/* Animations */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Spinner */
+.spinner {
+  display: inline-block;
+  width: 13px; height: 13px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+/* Result box */
+.result-box {
+  margin-top: 14px;
+  padding: 13px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  animation: fadeIn 0.15s ease;
+}
+.result-box.success { background: var(--ok-wash); border: 1px solid oklch(0.86 0.08 150); }
+.result-box.error   { background: var(--bad-wash); border: 1px solid oklch(0.86 0.10 25); }
+.result-box.pending { background: var(--surface-2); border: 1px solid var(--line-2); }
+.result-box .r-title {
+  font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;
+}
+.result-box.success .r-title { color: oklch(0.38 0.12 150); }
+.result-box.error   .r-title { color: oklch(0.38 0.14 25); }
+.result-box.pending .r-title { color: var(--ink-3); }
+.result-box .r-row {
+  display: flex; gap: 8px; margin-top: 3px; font-size: 12.5px;
+}
+.result-box .r-key { color: var(--ink-3); width: 88px; flex-shrink: 0; }
+.result-box .r-val { color: var(--ink); word-break: break-all; }
+.result-box .r-mono { font-family: var(--mono); font-size: 11.5px; }
+
+/* QR box */
+.qr-wrap {
+  margin-top: 16px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  animation: fadeIn 0.2s ease;
+}
+.qr-wrap canvas, .qr-wrap img { display: block; border-radius: 4px; }
+.qr-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  text-align: center;
+  word-break: break-all;
+}
+
+/* Verify banner (doorman) */
+.verify-banner {
+  margin-top: 16px;
+  border-radius: 14px;
+  padding: 44px 24px 36px;
+  text-align: center;
+  animation: fadeIn 0.2s ease;
+}
+.verify-banner.valid   { background: var(--ok-wash); border: 2px solid var(--ok); }
+.verify-banner.invalid { background: var(--bad-wash); border: 2px solid var(--bad); }
+.verify-banner.checking { background: var(--surface-2); border: 2px solid var(--line-2); }
+.verify-icon { font-size: 2.8rem; line-height: 1; margin-bottom: 10px; }
+.verify-status {
+  font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 18px;
+}
+.verify-status.ok  { color: var(--ok); }
+.verify-status.bad { color: var(--bad); }
+.verify-status.mid { color: var(--ink-3); }
+.verify-meta { display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; }
+.verify-meta-row { display: flex; justify-content: center; gap: 8px; }
+.verify-meta-key { color: var(--ink-3); width: 72px; text-align: right; flex-shrink: 0; }
+.verify-meta-val { color: var(--ink); font-weight: 500; text-align: left; word-break: break-all; }
+.verify-meta-mono { font-family: var(--mono); font-size: 11.5px; font-weight: 400; }
+
+/* Doorman token input */
+.doorman-input {
+  width: 100%; padding: 18px 20px;
+  font-size: 2rem; font-weight: 600; letter-spacing: -0.02em; text-align: center;
+  background: var(--surface); border: 1px solid var(--line-2); border-radius: 12px;
+  font-family: var(--font); color: var(--ink); outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  -moz-appearance: textfield;
+}
+.doorman-input::-webkit-outer-spin-button,
+.doorman-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.doorman-input::placeholder { color: var(--ink-4); font-weight: 400; }
+.doorman-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 16%, transparent);
+}
+
+/* Number inputs: remove arrows */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+input[type=number] { -moz-appearance: textfield; }
+</style>
 </head>
 <body>
+<div id="root"></div>
+<script type="text/babel" data-presets="env,react">
+const { useState, useEffect, useRef, useMemo } = React;
 
-<!-- Top bar -->
-<header class="topbar">
-    <div class="topbar-logo">Tokn Based <span>/ Demo</span></div>
+/* ─── Contract constants (unchanged from index.html) ─── */
+const CONTRACT_ADDRESS = "0x1abe21a7669f8E9E8A95295b132f810807bC143F";
+const ABI = [
+  {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"invalidateTicket","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"string","name":"eventName","type":"string"}],"name":"mintTicket","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"string","name":"eventName","type":"string"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"batchMintTicket","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[],"stateMutability":"nonpayable","type":"constructor"},
+  {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"TicketInvalidated","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"tokenId","type":"uint256"},{"indexed":false,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"string","name":"eventName","type":"string"}],"name":"TicketMinted","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"tokenId","type":"uint256"},{"indexed":false,"internalType":"address","name":"from","type":"address"},{"indexed":false,"internalType":"address","name":"to","type":"address"}],"name":"TicketTransferred","type":"event"},
+  {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"},{"internalType":"address","name":"to","type":"address"}],"name":"transferTicket","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[],"name":"nextTokenId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+  {"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"tickets","outputs":[{"internalType":"address","name":"currentOwner","type":"address"},{"internalType":"bool","name":"isValid","type":"bool"},{"internalType":"string","name":"eventName","type":"string"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"verifyTicket","outputs":[{"internalType":"bool","name":"isValid","type":"bool"},{"internalType":"address","name":"currentOwner","type":"address"},{"internalType":"string","name":"eventName","type":"string"}],"stateMutability":"view","type":"function"}
+];
 
-    <nav class="tab-nav" role="tablist">
-        <button class="tab active" id="tab-organizer" onclick="showView('organizer')" role="tab">Veranstalter</button>
-        <button class="tab"        id="tab-doorman"   onclick="showView('doorman')"   role="tab">Einlass</button>
-        <button class="tab"        id="tab-tickets"   onclick="showView('tickets')"   role="tab">Meine Tickets</button>
-    </nav>
+const shortAddr = (addr) => addr.slice(0, 6) + '…' + addr.slice(-4);
 
-    <div class="wallet-status">
-        <div class="wallet-dot" id="walletDot"></div>
-        <span id="walletShort">Nicht verbunden</span>
+function getReadContract() {
+  let provider;
+  if (window.ethereum) {
+    provider = new ethers.providers.Web3Provider(window.ethereum);
+  } else {
+    provider = new ethers.providers.JsonRpcProvider("https://rpc2.sepolia.org");
+  }
+  return new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+}
+
+/* ─── Icon (from Tokn_Based.html) ─── */
+const Icon = ({ name, size = 16, strokeWidth = 1.7 }) => {
+  const paths = {
+    plus:   <><path d="M12 5v14"/><path d="M5 12h14"/></>,
+    ticket: <><path d="M2 9a3 3 0 1 1 0 6v3a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-3a3 3 0 1 1 0-6V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><path d="M13 5v2"/><path d="M13 11v2"/><path d="M13 17v2"/></>,
+    check:  <><path d="M20 6L9 17l-5-5"/></>,
+    x:      <><path d="M18 6 6 18"/><path d="M6 6l12 12"/></>,
+    search: <><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></>,
+    arrow:  <><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></>,
+    shield: <><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11z"/><path d="m9 12 2 2 4-4"/></>,
+    wifi:   <><path d="M5 12.55a11 11 0 0 1 14 0"/><path d="M8.5 15.55a7 7 0 0 1 7 0"/><path d="M12 19.55v0"/></>,
+    users:  <><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M17 3.13A4 4 0 0 1 17 11"/></>,
+    scan:   <><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></>,
+    door:   <><path d="M13 4h3a2 2 0 0 1 2 2v14"/><path d="M2 20h3"/><path d="M13 20h9"/><path d="M10 12v.01"/><path d="M13 4.562v16.157a1 1 0 0 1-1.067.994L3 20.5a1 1 0 0 1-.933-.993V5.5a1 1 0 0 1 .838-.986l9-1.5a1 1 0 0 1 1.095.548z"/></>,
+  };
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+      {paths[name] || null}
+    </svg>
+  );
+};
+
+/* ─── ResultBox ─── */
+function ResultBox({ result }) {
+  if (!result) return null;
+  const { type, title, fields } = result;
+  return (
+    <div className={`result-box ${type}`}>
+      <div className="r-title">
+        {type === "pending" && <span className="spinner" />}
+        {type === "success" && "✓"}
+        {type === "error"   && "✕"}
+        <span>{title}</span>
+      </div>
+      {fields && fields.map(([k, v, mono], i) => (
+        <div key={i} className="r-row">
+          <span className="r-key">{k}</span>
+          <span className={`r-val${mono ? " r-mono" : ""}`}>{v}</span>
+        </div>
+      ))}
     </div>
-</header>
+  );
+}
 
-<main class="page">
-
-    <!-- ══════════════════════════════════════
-         VIEW 1 – Veranstalter
-         Benötigt MetaMask / Wallet-Verbindung
-    ══════════════════════════════════════ -->
-    <div id="view-organizer" class="view active">
-
-        <div class="page-header">
-            <h1>NFT Ticket Verifikation</h1>
-            <p>Ethereum Sepolia · Smart Contract <span style="font-family: var(--mono); font-size:0.8em;">0x79Bf…819f</span></p>
-            <button id="connectBtn" onclick="connectWallet()">Wallet verbinden</button>
-            <p class="owner-tag" id="ownerTag">Verbunden als <strong id="ownerAddress"></strong> · <strong style="color: var(--success)">Contract Owner</strong></p>
-        </div>
-
-        <!-- Mint -->
-        <section class="section">
-            <div class="section-label">Veranstalter</div>
-            <div class="section-title">Ticket erstellen <span class="restricted-note">Nur Owner</span></div>
-            <div class="field">
-                <label>Empfänger-Adresse</label>
-                <input id="mintTo" class="mono" placeholder="0x..." />
-            </div>
-            <div class="field">
-                <label>Event Name</label>
-                <input id="eventName" placeholder="z.B. Konzert München · 12. Juli" />
-            </div>
-            <button class="btn btn-primary" onclick="mintTicket()">Ticket minten</button>
-            <div id="mintResult" class="result"></div>
-            <div id="mintQr" class="qr-box"></div>
-        </section>
-
-        <!-- Batch Mint -->
-        <section class="section">
-            <div class="section-label">Veranstalter</div>
-            <div class="section-title">Batch Mint <span class="restricted-note">Nur Owner</span></div>
-            <div class="field">
-                <label>Empfänger-Adresse</label>
-                <input id="batchMintTo" class="mono" placeholder="0x..." />
-            </div>
-            <div class="field">
-                <label>Event Name</label>
-                <input id="batchEventName" placeholder="z.B. Konzert München · 12. Juli" />
-            </div>
-            <div class="field">
-                <label>Anzahl Tickets (1–500)</label>
-                <input id="batchAmount" type="number" min="1" max="500" placeholder="10" />
-            </div>
-            <button class="btn btn-primary" onclick="batchMintTickets()">Tickets erstellen</button>
-            <div id="batchMintResult" class="result"></div>
-        </section>
-
-        <!-- Transfer -->
-        <section class="section">
-            <div class="section-label">Besitzer</div>
-            <div class="section-title">Ticket übertragen</div>
-            <div class="field">
-                <label>Token ID</label>
-                <input id="transferId" type="number" min="1" placeholder="1" />
-            </div>
-            <div class="field">
-                <label>Neue Besitzer-Adresse</label>
-                <input id="transferTo" class="mono" placeholder="0x..." />
-            </div>
-            <button class="btn btn-primary" onclick="transferTicket()">Ticket übertragen</button>
-            <div id="transferResult" class="result"></div>
-        </section>
-
-    </div><!-- /view-organizer -->
-
-
-    <!-- ══════════════════════════════════════
-         VIEW 2 – Einlass / Türsteher
-         Kein Wallet nötig zum Prüfen.
-         Wallet nur für "Entwerten" nötig.
-    ══════════════════════════════════════ -->
-    <div id="view-doorman" class="view">
-
-        <div class="page-header">
-            <h1>Einlasskontrolle</h1>
-            <p>Token ID eingeben und Ticket prüfen — kein Wallet nötig.</p>
-        </div>
-
-        <div class="doorman-input-area">
-
-            <!-- Großes Token ID Feld -->
-            <div class="doorman-id-field">
-                <input
-                    id="doormanId"
-                    type="number"
-                    min="1"
-                    placeholder="Token ID"
-                    onkeydown="if(event.key==='Enter') doormanVerify()"
-                />
-            </div>
-
-            <button class="btn btn-primary" onclick="doormanVerify()" style="font-size: 1rem; padding: 13px;">
-                Ticket prüfen
-            </button>
-
-            <!-- Großes visuelles Ergebnis -->
-            <div id="doormanBanner" class="verify-banner"></div>
-
-            <!-- Entwerten (erscheint nach Prüfung, braucht Wallet) -->
-            <button
-                id="doormanInvalidateBtn"
-                class="btn btn-danger"
-                onclick="doormanInvalidate()"
-                style="display:none;"
-            >
-                Ticket entwerten
-            </button>
-            <div id="doormanInvalidateResult" class="result"></div>
-
-        </div>
-
-    </div><!-- /view-doorman -->
-
-
-    <!-- ══════════════════════════════════════
-         VIEW 3 – Meine Tickets
-         Wallet nötig. Liest Events aus und
-         leitet daraus den aktuellen Besitz ab.
-    ══════════════════════════════════════ -->
-    <div id="view-tickets" class="view">
-
-        <div class="page-header">
-            <h1>Meine Tickets</h1>
-            <p>Alle Tickets, die aktuell deiner Wallet gehören.</p>
-        </div>
-
-        <!-- Angezeigt wenn Wallet noch nicht verbunden -->
-        <div id="ticketsConnectPrompt" class="tickets-connect-prompt">
-            <p>Verbinde deine Wallet um deine Tickets zu sehen.</p>
-            <button onclick="connectAndLoad()">Wallet verbinden</button>
-        </div>
-
-        <!-- Manuelle Adresssuche (immer sichtbar, kein Wallet nötig) -->
-        <section class="section">
-            <div class="section-label">Adresse nachschlagen</div>
-            <div class="section-title">Tickets einer Wallet suchen</div>
-            <div class="field">
-                <label>Wallet-Adresse</label>
-                <input
-                    id="ticketsSearchInput"
-                    class="mono"
-                    placeholder="0x..."
-                    onkeydown="if(event.key==='Enter') searchByAddress()"
-                />
-            </div>
-            <button class="btn btn-primary" onclick="searchByAddress()">Tickets suchen</button>
-        </section>
-
-        <!-- Label: für welche Adresse wird gerade angezeigt -->
-        <div id="ticketsResultLabel" style="display:none; margin: 28px 0 0;">
-            <span class="section-label">Tickets für&nbsp;</span><span id="ticketsResultAddr" style="font-family: var(--mono); font-size: 0.75rem; color: var(--text-secondary);"></span>
-        </div>
-
-        <!-- Angezeigt während Daten laden -->
-        <div id="ticketsLoading" style="display:none;" class="tickets-loading">
-            <span class="spinner"></span> Tickets werden geladen…
-        </div>
-
-        <!-- Leerer Zustand -->
-        <div id="ticketsEmpty" class="tickets-empty">
-            Keine Tickets gefunden für diese Adresse.
-        </div>
-
-        <!-- Ticket-Karten werden hier eingefügt -->
-        <div id="ticketList" class="ticket-list"></div>
-
-    </div><!-- /view-tickets -->
-
-
-    <footer class="footer">
-        <span>Tokn Based · 2025</span>
-        <span>Sepolia Testnet</span>
-    </footer>
-
-</main>
-
-<script>
-    const CONTRACT_ADDRESS = "0x1abe21a7669f8E9E8A95295b132f810807bC143F";
-    const ABI = [
-        {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"invalidateTicket","outputs":[],"stateMutability":"nonpayable","type":"function"},
-        {"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"string","name":"eventName","type":"string"}],"name":"mintTicket","outputs":[],"stateMutability":"nonpayable","type":"function"},
-        {"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"string","name":"eventName","type":"string"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"batchMintTicket","outputs":[],"stateMutability":"nonpayable","type":"function"},
-        {"inputs":[],"stateMutability":"nonpayable","type":"constructor"},
-        {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"TicketInvalidated","type":"event"},
-        {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"tokenId","type":"uint256"},{"indexed":false,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"string","name":"eventName","type":"string"}],"name":"TicketMinted","type":"event"},
-        {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"tokenId","type":"uint256"},{"indexed":false,"internalType":"address","name":"from","type":"address"},{"indexed":false,"internalType":"address","name":"to","type":"address"}],"name":"TicketTransferred","type":"event"},
-        {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"},{"internalType":"address","name":"to","type":"address"}],"name":"transferTicket","outputs":[],"stateMutability":"nonpayable","type":"function"},
-        {"inputs":[],"name":"nextTokenId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-        {"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
-        {"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"tickets","outputs":[{"internalType":"address","name":"currentOwner","type":"address"},{"internalType":"bool","name":"isValid","type":"bool"},{"internalType":"string","name":"eventName","type":"string"}],"stateMutability":"view","type":"function"},
-        {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"verifyTicket","outputs":[{"internalType":"bool","name":"isValid","type":"bool"},{"internalType":"address","name":"currentOwner","type":"address"},{"internalType":"string","name":"eventName","type":"string"}],"stateMutability":"view","type":"function"}
-    ];
-
-    let contract, signer;
-
-    // ── View switching ──────────────────────────────────────
-
-    function showView(name) {
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.getElementById('view-' + name).classList.add('active');
-        document.getElementById('tab-' + name).classList.add('active');
-
-        // Tickets-View: automatisch laden wenn Wallet bereits verbunden
-        if (name === 'tickets' && signer) loadMyTickets();
-    }
-
-    // ── Provider helpers ────────────────────────────────────
-
-    // Gibt einen read-only Contract zurück – kein Wallet nötig.
-    // Nutzt MetaMask falls vorhanden (schneller), sonst öffentlichen RPC.
-    function getReadContract() {
-        if (contract) return contract; // signer-Contract ist bereits verbunden
-        let provider;
-        if (window.ethereum) {
-            // MetaMask ist da aber noch nicht verbunden – reicht für Lesezugriff
-            provider = new ethers.providers.Web3Provider(window.ethereum);
-        } else {
-            // Kein MetaMask: öffentlicher Sepolia-RPC als Fallback
-            provider = new ethers.providers.JsonRpcProvider("https://rpc2.sepolia.org");
-        }
-        return new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
-    }
-
-    function shortAddr(addr) {
-        return addr.slice(0, 6) + '…' + addr.slice(-4);
-    }
-
-    // ── Wallet verbinden ────────────────────────────────────
-
-    async function connectWallet() {
-        if (!window.ethereum) { alert("MetaMask nicht gefunden."); return; }
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
-        await provider.send("eth_requestAccounts", []);
-        signer = provider.getSigner();
-        contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
-
-        const address       = await signer.getAddress();
-        const contractOwner = await contract.owner();
-        const isOwner       = address.toLowerCase() === contractOwner.toLowerCase();
-
-        document.getElementById("walletDot").classList.add("connected");
-        document.getElementById("walletShort").textContent = shortAddr(address);
-
-        const btn = document.getElementById("connectBtn");
-        btn.disabled = true;
-        btn.textContent = "Verbunden";
-
-        if (isOwner) {
-            document.getElementById("ownerAddress").textContent = shortAddr(address);
-            document.getElementById("ownerTag").classList.add("visible");
-        }
-
-        // Tickets-View: Connect-Prompt ausblenden und direkt laden falls aktiv
-        document.getElementById("ticketsConnectPrompt").style.display = "none";
-        if (document.getElementById("view-tickets").classList.contains("active")) {
-            loadMyTickets();
-        }
-    }
-
-    async function ensureConnected() {
-        if (!contract) await connectWallet();
-    }
-
-    // ── URL-Parameter: beim Laden prüfen ob ?id= vorhanden ──
-    // Wenn ja: Türsteher-Tab öffnen und direkt verifizieren.
-    // Das ist der Endpunkt des QR-Scan-Flows.
-    document.addEventListener('DOMContentLoaded', () => {
-        const id = new URLSearchParams(window.location.search).get('id');
-        if (id) {
-            showView('doorman');
-            document.getElementById('doormanId').value = id;
-            doormanVerify();
-        }
+/* ─── QRCodeBox (renders real QR via QRCode.js) ─── */
+function QRCodeBox({ tokenId }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (tokenId == null || !ref.current) return;
+    ref.current.innerHTML = "";
+    new QRCode(ref.current, {
+      text: `https://sys-emil.github.io/tokn-based/?id=${tokenId}`,
+      width: 160, height: 160,
+      colorDark: "#111111", colorLight: "#f9fafb",
     });
+  }, [tokenId]);
+  if (tokenId == null) return null;
+  return (
+    <div className="qr-wrap">
+      <div ref={ref} />
+      <span className="qr-label">
+        https://sys-emil.github.io/tokn-based/?id={tokenId}
+      </span>
+    </div>
+  );
+}
 
-    // ── UI helpers ──────────────────────────────────────────
+/* ─── OrganizerView ─── */
+function OrganizerView({ walletConnected, walletAddress, isOwner, onConnect, contractRef }) {
+  /* Mint state */
+  const [mintTo, setMintTo]           = useState("");
+  const [mintEvent, setMintEvent]     = useState("");
+  const [mintResult, setMintResult]   = useState(null);
+  const [mintQrId, setMintQrId]       = useState(null);
 
-    function showPending(id, label = "Transaktion wird gesendet") {
-        const el = document.getElementById(id);
-        el.className = "result pending";
-        el.style.display = "block";
-        el.innerHTML = `<div class="result-row"><span class="spinner"></span>&nbsp;${label}…</div>`;
+  /* Batch mint state */
+  const [batchTo, setBatchTo]             = useState("");
+  const [batchEvent, setBatchEvent]       = useState("");
+  const [batchAmount, setBatchAmount]     = useState("");
+  const [batchResult, setBatchResult]     = useState(null);
+
+  /* Transfer state */
+  const [xfrId, setXfrId]           = useState("");
+  const [xfrTo, setXfrTo]           = useState("");
+  const [xfrResult, setXfrResult]   = useState(null);
+
+  const ensureConnected = async () => {
+    if (!contractRef.current) await onConnect();
+  };
+
+  const handleMint = async () => {
+    try {
+      await ensureConnected();
+      const c = contractRef.current;
+      if (!mintTo.trim() || !mintEvent.trim()) {
+        setMintResult({ type: "error", title: "Bitte alle Felder ausfüllen." });
+        return;
+      }
+      setMintQrId(null);
+      setMintResult({ type: "pending", title: "Transaktion wird gesendet…" });
+      const tx = await c.mintTicket(mintTo.trim(), mintEvent.trim());
+      setMintResult({ type: "pending", title: "Warte auf Bestätigung…" });
+      const receipt  = await tx.wait();
+      const nextId   = await c.nextTokenId();
+      const mintedId = nextId.toNumber() - 1;
+      setMintResult({
+        type: "success",
+        title: `Ticket #${mintedId} erstellt`,
+        fields: [
+          ["Event",     mintEvent.trim()],
+          ["Empfänger", mintTo.trim(),            true],
+          ["TX",        receipt.transactionHash,  true],
+        ],
+      });
+      setMintQrId(mintedId);
+    } catch (e) {
+      setMintResult({ type: "error", title: e.reason || e.message });
+      setMintQrId(null);
     }
+  };
 
-    function showResult(id, rows, type) {
-        const el = document.getElementById(id);
-        el.className = `result ${type}`;
-        el.style.display = "block";
-
-        const statusIcons   = { success: "✓", error: "✕", pending: "·" };
-        const statusClasses = { success: "ok", error: "bad", pending: "mid" };
-
-        let html = "";
-        if (rows.title) {
-            html += `<div class="result-status ${statusClasses[type]}">${statusIcons[type]} ${rows.title}</div>`;
-        }
-        if (rows.fields) {
-            rows.fields.forEach(([key, val, mono]) => {
-                html += `<div class="result-row">
-                    <span class="result-key">${key}</span>
-                    <span class="result-val${mono ? " mono" : ""}">${val}</span>
-                </div>`;
-            });
-        }
-        el.innerHTML = html;
+  const handleBatchMint = async () => {
+    try {
+      await ensureConnected();
+      const c = contractRef.current;
+      const amount = parseInt(batchAmount, 10);
+      if (!batchTo.trim() || !batchEvent.trim() || !amount) {
+        setBatchResult({ type: "error", title: "Bitte alle Felder ausfüllen." });
+        return;
+      }
+      if (amount < 1 || amount > 500) {
+        setBatchResult({ type: "error", title: "Anzahl muss zwischen 1 und 500 liegen." });
+        return;
+      }
+      setBatchResult({ type: "pending", title: "Transaktion wird gesendet…" });
+      const tx = await c.batchMintTicket(batchTo.trim(), batchEvent.trim(), amount);
+      setBatchResult({ type: "pending", title: "Warte auf Bestätigung…" });
+      const receipt = await tx.wait();
+      const minted  = receipt.events.filter(e => e.event === "TicketMinted");
+      const firstId = minted[0].args.tokenId.toNumber();
+      const lastId  = minted[minted.length - 1].args.tokenId.toNumber();
+      setBatchResult({
+        type: "success",
+        title: `${amount} Tickets erstellt`,
+        fields: [
+          ["Event",     batchEvent.trim()],
+          ["Erste ID",  `#${firstId}`],
+          ["Letzte ID", `#${lastId}`],
+          ["Anzahl",    String(amount)],
+          ["Empfänger", batchTo.trim(),           true],
+          ["TX",        receipt.transactionHash,  true],
+        ],
+      });
+    } catch (e) {
+      setBatchResult({ type: "error", title: e.reason || e.message });
     }
+  };
 
-    // ── QR Code ─────────────────────────────────────────────
+  const handleTransfer = async () => {
+    try {
+      await ensureConnected();
+      const c = contractRef.current;
+      if (!xfrId || !xfrTo.trim()) {
+        setXfrResult({ type: "error", title: "Bitte alle Felder ausfüllen." });
+        return;
+      }
+      setXfrResult({ type: "pending", title: "Transaktion wird gesendet…" });
+      const tx = await c.transferTicket(xfrId, xfrTo.trim());
+      setXfrResult({ type: "pending", title: "Warte auf Bestätigung…" });
+      const receipt = await tx.wait();
+      setXfrResult({
+        type: "success",
+        title: `Ticket #${xfrId} übertragen`,
+        fields: [
+          ["Neuer Besitzer", xfrTo.trim(),           true],
+          ["TX",             receipt.transactionHash, true],
+        ],
+      });
+    } catch (e) {
+      setXfrResult({ type: "error", title: e.reason || e.message });
+    }
+  };
 
-    // Rendert einen QR Code in den angegebenen Container.
-    // QRCode.js erzeugt ein <canvas>-Element im Container.
-    // Wir leeren den Container zuerst, damit bei mehreren Mints
-    // kein zweiter QR danebengeklebt wird.
-    function renderQR(containerId, tokenId) {
-        const el = document.getElementById(containerId);
-        el.innerHTML = "";
-        new QRCode(el, {
-            text: 'https://sys-emil.github.io/tokn-based/?id=' + tokenId,
-            width:  160,
-            height: 160,
-            colorDark:  "#111111",
-            colorLight: "#f9fafb",
+  return (
+    <>
+      <div className="aurora" />
+      <div className="container" style={{ maxWidth: 700 }}>
+
+        {/* Hero + wallet */}
+        <div className="hero">
+          <div className="eyebrow">
+            <span className="pulse" />
+            Ethereum Sepolia · <span style={{ fontFamily: "var(--mono)", fontSize: 11 }}>0x1abe…43F</span>
+          </div>
+          <h1>NFT Ticket Verwaltung</h1>
+          <p className="lead">
+            Tickets minten, übertragen und verwalten — direkt auf der Ethereum Sepolia Blockchain.
+          </p>
+          {!walletConnected ? (
+            <button className="btn primary lg" style={{ marginTop: 20 }} onClick={onConnect}>
+              <Icon name="wifi" size={15} /> Wallet verbinden
+            </button>
+          ) : (
+            <div className="row gap-2" style={{ marginTop: 20 }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--ok)", flexShrink: 0, display: "inline-block" }} />
+              <span style={{ fontFamily: "var(--mono)", fontSize: 13, color: "var(--ink-3)" }}>{walletAddress}</span>
+              {isOwner && <span className="chip ok"><span className="d" />Contract Owner</span>}
+            </div>
+          )}
+        </div>
+
+        {/* ── Ticket erstellen ── */}
+        <section>
+          <div className="card">
+            <div className="card-header">
+              <div>
+                <h3>Ticket erstellen</h3>
+                <div className="sub">Einzelnes NFT Ticket minten</div>
+              </div>
+              <span className="chip accent"><Icon name="shield" size={11} /> Nur Owner</span>
+            </div>
+            <div className="card-body">
+              <div className="field">
+                <label>Empfänger-Adresse</label>
+                <input className="input input-mono" placeholder="0x…" value={mintTo} onChange={e => setMintTo(e.target.value)} />
+              </div>
+              <div className="field" style={{ marginBottom: 14 }}>
+                <label>Event Name</label>
+                <input className="input" placeholder="z. B. Konzert München · 12. Juli" value={mintEvent} onChange={e => setMintEvent(e.target.value)} />
+              </div>
+              <button className="btn primary btn-full" onClick={handleMint}>
+                <Icon name="ticket" size={14} /> Ticket minten
+              </button>
+              <ResultBox result={mintResult} />
+              <QRCodeBox tokenId={mintQrId} />
+            </div>
+          </div>
+        </section>
+
+        {/* ── Batch Mint ── */}
+        <section>
+          <div className="card">
+            <div className="card-header">
+              <div>
+                <h3>Batch Mint</h3>
+                <div className="sub">Mehrere Tickets auf einmal erstellen</div>
+              </div>
+              <span className="chip accent"><Icon name="shield" size={11} /> Nur Owner</span>
+            </div>
+            <div className="card-body">
+              <div className="field">
+                <label>Empfänger-Adresse</label>
+                <input className="input input-mono" placeholder="0x…" value={batchTo} onChange={e => setBatchTo(e.target.value)} />
+              </div>
+              <div className="field">
+                <label>Event Name</label>
+                <input className="input" placeholder="z. B. Konzert München · 12. Juli" value={batchEvent} onChange={e => setBatchEvent(e.target.value)} />
+              </div>
+              <div className="field" style={{ marginBottom: 14 }}>
+                <label>Anzahl Tickets (1–500)</label>
+                <input className="input" type="number" min="1" max="500" placeholder="10" value={batchAmount} onChange={e => setBatchAmount(e.target.value)} />
+              </div>
+              <button className="btn primary btn-full" onClick={handleBatchMint}>
+                <Icon name="plus" size={14} /> Tickets erstellen
+              </button>
+              <ResultBox result={batchResult} />
+            </div>
+          </div>
+        </section>
+
+        {/* ── Transfer ── */}
+        <section>
+          <div className="card">
+            <div className="card-header">
+              <div>
+                <h3>Ticket übertragen</h3>
+                <div className="sub">Token an eine neue Wallet-Adresse senden</div>
+              </div>
+            </div>
+            <div className="card-body">
+              <div className="field">
+                <label>Token ID</label>
+                <input className="input" type="number" min="1" placeholder="1" value={xfrId} onChange={e => setXfrId(e.target.value)} />
+              </div>
+              <div className="field" style={{ marginBottom: 14 }}>
+                <label>Neue Besitzer-Adresse</label>
+                <input className="input input-mono" placeholder="0x…" value={xfrTo} onChange={e => setXfrTo(e.target.value)} />
+              </div>
+              <button className="btn primary btn-full" onClick={handleTransfer}>
+                <Icon name="arrow" size={14} /> Ticket übertragen
+              </button>
+              <ResultBox result={xfrResult} />
+            </div>
+          </div>
+        </section>
+
+        <footer style={{ marginTop: 56, paddingTop: 20, borderTop: "1px solid var(--line)", display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--ink-3)" }}>
+          <span>Tokn Based · 2025</span>
+          <span>Sepolia Testnet</span>
+        </footer>
+      </div>
+    </>
+  );
+}
+
+/* ─── AttendeeView (Meine Tickets) ─── */
+function AttendeeView({ walletConnected, walletAddress, onConnect }) {
+  const [searchInput, setSearchInput]   = useState("");
+  const [tickets, setTickets]           = useState([]);
+  const [loading, setLoading]           = useState(false);
+  const [emptyMsg, setEmptyMsg]         = useState("");
+  const [resultAddr, setResultAddr]     = useState("");
+  const hasAutoLoaded = useRef(false);
+
+  const loadTicketsForAddress = async (rawAddress) => {
+    const userAddr = rawAddress.toLowerCase();
+    setLoading(true);
+    setTickets([]);
+    setEmptyMsg("");
+    setResultAddr("");
+    try {
+      const rc = getReadContract();
+      const mintedEvents   = await rc.queryFilter(rc.filters.TicketMinted());
+      const transferEvents = await rc.queryFilter(rc.filters.TicketTransferred());
+
+      const owned = new Set();
+      for (const e of mintedEvents) {
+        if (e.args.to.toLowerCase() === userAddr) owned.add(e.args.tokenId.toString());
+      }
+      for (const e of transferEvents) {
+        const id = e.args.tokenId.toString();
+        if (e.args.to.toLowerCase()   === userAddr) owned.add(id);
+        if (e.args.from.toLowerCase() === userAddr) owned.delete(id);
+      }
+
+      setResultAddr(shortAddr(rawAddress));
+
+      const tokenIds = Array.from(owned);
+      if (tokenIds.length === 0) {
+        setEmptyMsg("Keine Tickets gefunden für diese Adresse.");
+        setLoading(false);
+        return;
+      }
+
+      const results = await Promise.all(
+        tokenIds.map(id => rc.verifyTicket(id).then(r => ({ id, isValid: r[0], eventName: r[2] })))
+      );
+      setTickets(results);
+    } catch (e) {
+      setEmptyMsg("Fehler: " + (e.reason || e.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* Auto-load once wallet connects */
+  useEffect(() => {
+    if (walletConnected && walletAddress && !hasAutoLoaded.current) {
+      hasAutoLoaded.current = true;
+      loadTicketsForAddress(walletAddress);
+    }
+  }, [walletConnected, walletAddress]);
+
+  const handleSearch = async () => {
+    const input = searchInput.trim();
+    if (!input.startsWith("0x") || input.length !== 42) {
+      setEmptyMsg("Bitte eine gültige Ethereum-Adresse eingeben (0x…, 42 Zeichen).");
+      setTickets([]);
+      setResultAddr("");
+      return;
+    }
+    await loadTicketsForAddress(input);
+  };
+
+  const handleConnectAndLoad = async () => {
+    await onConnect();
+    /* loadTicketsForAddress fires via useEffect after walletAddress updates */
+  };
+
+  return (
+    <div className="mobile-canvas">
+      <div style={{ maxWidth: 560, margin: "0 auto" }}>
+
+        <div style={{ marginBottom: 32 }}>
+          <h1 style={{ fontSize: 30, fontWeight: 600, letterSpacing: "-0.03em" }}>Meine Tickets</h1>
+          <p style={{ marginTop: 8, color: "var(--ink-3)", fontSize: 15, lineHeight: 1.5 }}>
+            Alle Tickets, die aktuell deiner Wallet gehören.
+          </p>
+        </div>
+
+        {/* Wallet connect prompt */}
+        {!walletConnected && (
+          <div className="card" style={{ padding: 24, textAlign: "center", marginBottom: 20 }}>
+            <p style={{ color: "var(--ink-3)", fontSize: 14, marginBottom: 16 }}>
+              Verbinde deine Wallet um deine Tickets automatisch zu laden.
+            </p>
+            <button className="btn primary" onClick={handleConnectAndLoad}>
+              <Icon name="wifi" size={14} /> Wallet verbinden
+            </button>
+          </div>
+        )}
+
+        {/* Address search */}
+        <div className="card" style={{ marginBottom: 20 }}>
+          <div className="card-header">
+            <div>
+              <h3>Adresse nachschlagen</h3>
+              <div className="sub">Kein Wallet nötig</div>
+            </div>
+            <Icon name="search" size={16} />
+          </div>
+          <div className="card-body">
+            <div className="field" style={{ marginBottom: 14 }}>
+              <label>Wallet-Adresse</label>
+              <input
+                className="input input-mono"
+                placeholder="0x…"
+                value={searchInput}
+                onChange={e => setSearchInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleSearch()}
+              />
+            </div>
+            <button className="btn primary btn-full" onClick={handleSearch}>
+              <Icon name="search" size={14} /> Tickets suchen
+            </button>
+          </div>
+        </div>
+
+        {/* Loading */}
+        {loading && (
+          <div className="row gap-2" style={{ padding: "20px 0", color: "var(--ink-3)", fontSize: 14 }}>
+            <span className="spinner" /> Tickets werden geladen…
+          </div>
+        )}
+
+        {/* Result label */}
+        {resultAddr && !loading && (
+          <div style={{ fontSize: 12, color: "var(--ink-3)", marginBottom: 10 }}>
+            Tickets für <span style={{ fontFamily: "var(--mono)" }}>{resultAddr}</span>
+          </div>
+        )}
+
+        {/* Empty */}
+        {emptyMsg && !loading && (
+          <div style={{ padding: "32px 0", textAlign: "center", color: "var(--ink-3)", fontSize: 14 }}>
+            {emptyMsg}
+          </div>
+        )}
+
+        {/* Ticket list */}
+        {tickets.length > 0 && !loading && (
+          <div className="card">
+            {tickets.map((t, i) => (
+              <div key={t.id} style={{
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                padding: "16px 20px",
+                borderTop: i === 0 ? "none" : "1px solid var(--line)",
+              }}>
+                <div>
+                  <div style={{ fontSize: 11, fontFamily: "var(--mono)", color: "var(--ink-3)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 3 }}>
+                    Token #{t.id}
+                  </div>
+                  <div style={{ fontWeight: 500, fontSize: 14 }}>{t.eventName || "–"}</div>
+                </div>
+                <span className={`chip ${t.isValid ? "ok" : "bad"}`}>
+                  <span className="d" />{t.isValid ? "Gültig" : "Entwertet"}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── DoorView (Einlasskontrolle) ─── */
+function DoorView({ onConnect, contractRef }) {
+  const [doorId, setDoorId]                     = useState("");
+  const [banner, setBanner]                     = useState(null);
+  const [invalidateVisible, setInvalidateVisible] = useState(false);
+  const [invalidateResult, setInvalidateResult] = useState(null);
+
+  const verifyId = async (id) => {
+    const clean = String(id).trim();
+    if (!clean) {
+      setBanner({ state: "checking", icon: "·", text: "Token ID eingeben", cls: "mid", meta: [] });
+      return;
+    }
+    setBanner({ state: "checking", icon: "⟳", text: "Abfrage läuft…", cls: "mid", meta: [] });
+    setInvalidateVisible(false);
+    setInvalidateResult(null);
+    try {
+      const rc = getReadContract();
+      const [isValid, currentOwner, eventName] = await rc.verifyTicket(clean);
+      const nullAddr = "0x0000000000000000000000000000000000000000";
+      if (currentOwner === nullAddr) {
+        setBanner({ state: "invalid", icon: "✕", text: "Ticket existiert nicht", cls: "bad", meta: [["Token ID", `#${clean}`]] });
+        return;
+      }
+      if (isValid) {
+        setBanner({
+          state: "valid", icon: "✓", text: "GÜLTIG", cls: "ok",
+          meta: [["Token ID", `#${clean}`], ["Event", eventName], ["Besitzer", shortAddr(currentOwner), true]],
         });
-        const label = document.createElement('span');
-        label.className = 'qr-label';
-        label.textContent = 'https://sys-emil.github.io/tokn-based/?id=' + tokenId;
-        el.appendChild(label);
-        el.classList.add('visible');
+      } else {
+        setBanner({
+          state: "invalid", icon: "✕", text: "ENTWERTET", cls: "bad",
+          meta: [["Token ID", `#${clean}`], ["Event", eventName], ["Besitzer", shortAddr(currentOwner), true]],
+        });
+      }
+      setInvalidateVisible(true);
+    } catch (e) {
+      setBanner({ state: "invalid", icon: "!", text: e.reason || e.message, cls: "bad", meta: [] });
     }
+  };
 
-    // ── Veranstalter-Aktionen ───────────────────────────────
+  const handleVerify = () => verifyId(doorId);
 
-    async function mintTicket() {
-        try {
-            await ensureConnected();
-            const to        = document.getElementById("mintTo").value.trim();
-            const eventName = document.getElementById("eventName").value.trim();
-            if (!to || !eventName) { showResult("mintResult", { title: "Bitte alle Felder ausfüllen." }, "error"); return; }
-
-            showPending("mintResult");
-            const tx = await contract.mintTicket(to, eventName);
-            showPending("mintResult", "Warte auf Bestätigung");
-            const receipt  = await tx.wait();
-            const nextId   = await contract.nextTokenId();
-            const mintedId = nextId.toNumber() - 1;
-
-            showResult("mintResult", {
-                title: `Ticket #${mintedId} erstellt`,
-                fields: [
-                    ["Event",     eventName],
-                    ["Empfänger", to,                    true],
-                    ["TX",        receipt.transactionHash, true],
-                ]
-            }, "success");
-            renderQR("mintQr", mintedId);
-        } catch (e) {
-            showResult("mintResult", { title: e.reason || e.message }, "error");
-            const qr = document.getElementById("mintQr");
-            qr.classList.remove("visible");
-            qr.innerHTML = "";
-        }
+  const handleInvalidate = async () => {
+    const clean = String(doorId).trim();
+    if (!clean) return;
+    try {
+      if (!contractRef.current) await onConnect();
+      const c = contractRef.current;
+      setInvalidateResult({ type: "pending", title: "Transaktion wird gesendet…" });
+      const tx = await c.invalidateTicket(clean);
+      setInvalidateResult({ type: "pending", title: "Warte auf Bestätigung…" });
+      const receipt = await tx.wait();
+      setInvalidateResult({
+        type: "success",
+        title: `Ticket #${clean} entwertet`,
+        fields: [["TX", receipt.transactionHash, true]],
+      });
+      setBanner({
+        state: "invalid", icon: "✕", text: "ENTWERTET", cls: "bad",
+        meta: [["Token ID", `#${clean}`], ["Status", "Soeben entwertet"]],
+      });
+      setInvalidateVisible(false);
+    } catch (e) {
+      setInvalidateResult({ type: "error", title: e.reason || e.message });
     }
+  };
 
-    async function batchMintTickets() {
-        try {
-            await ensureConnected();
-            const to        = document.getElementById("batchMintTo").value.trim();
-            const eventName = document.getElementById("batchEventName").value.trim();
-            const amount    = parseInt(document.getElementById("batchAmount").value, 10);
+  /* Handle ?id= URL param */
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("id");
+    if (id) {
+      setDoorId(id);
+      verifyId(id);
+    }
+  }, []);
 
-            if (!to || !eventName || !amount) {
-                showResult("batchMintResult", { title: "Bitte alle Felder ausfüllen." }, "error");
-                return;
+  return (
+    <div className="mobile-canvas">
+      <div style={{ maxWidth: 480, margin: "0 auto" }}>
+
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <h1 style={{ fontSize: 30, fontWeight: 600, letterSpacing: "-0.03em" }}>Einlasskontrolle</h1>
+          <p style={{ marginTop: 8, color: "var(--ink-3)", fontSize: 15 }}>
+            Token ID eingeben und Ticket prüfen — kein Wallet nötig.
+          </p>
+        </div>
+
+        {/* Input card */}
+        <div className="card" style={{ padding: 20 }}>
+          <input
+            type="number"
+            className="doorman-input"
+            placeholder="Token ID"
+            value={doorId}
+            onChange={e => setDoorId(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && handleVerify()}
+          />
+          <button
+            className="btn primary btn-full"
+            style={{ marginTop: 12, padding: "13px 14px", fontSize: 15 }}
+            onClick={handleVerify}
+          >
+            <Icon name="scan" size={16} /> Ticket prüfen
+          </button>
+        </div>
+
+        {/* Banner */}
+        {banner && (
+          <div className={`verify-banner ${banner.state}`}>
+            <div className="verify-icon">{banner.icon}</div>
+            <div className={`verify-status ${banner.cls}`}>{banner.text}</div>
+            {banner.meta.length > 0 && (
+              <div className="verify-meta">
+                {banner.meta.map(([k, v, mono], i) => (
+                  <div key={i} className="verify-meta-row">
+                    <span className="verify-meta-key">{k}</span>
+                    <span className={`verify-meta-val${mono ? " verify-meta-mono" : ""}`}>{v}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Invalidate */}
+        {invalidateVisible && (
+          <button
+            className="btn danger btn-full"
+            style={{ marginTop: 12, padding: "12px 14px", fontSize: 14 }}
+            onClick={handleInvalidate}
+          >
+            <Icon name="x" size={14} /> Ticket entwerten
+          </button>
+        )}
+
+        <ResultBox result={invalidateResult} />
+      </div>
+    </div>
+  );
+}
+
+/* ─── TopBar ─── */
+function TopBar({ role, setRole, walletConnected, walletAddress }) {
+  return (
+    <div className="topbar">
+      <div className="topbar-inner">
+        <div className="logo">
+          <span className="logo-mark" />
+          <b>Tokn</b><span>Based</span>
+        </div>
+        <div className="topbar-right">
+          <div className="role-switcher" role="tablist">
+            <button className={role === "organizer" ? "active" : ""} onClick={() => setRole("organizer")}>
+              <span className="dot" /> Organisator
+            </button>
+            <button className={role === "attendee" ? "active" : ""} onClick={() => setRole("attendee")}>
+              <span className="dot" /> Meine Tickets
+            </button>
+            <button className={role === "door" ? "active" : ""} onClick={() => setRole("door")}>
+              <span className="dot" /> Einlass
+            </button>
+          </div>
+          <div className="row gap-2" style={{ fontSize: 12.5, color: "var(--ink-3)" }}>
+            <span style={{
+              width: 7, height: 7, borderRadius: "50%",
+              background: walletConnected ? "var(--ok)" : "var(--line)",
+              display: "inline-block", flexShrink: 0,
+            }} />
+            {walletConnected
+              ? <span style={{ fontFamily: "var(--mono)", fontSize: 12 }}>{shortAddr(walletAddress)}</span>
+              : <span>Nicht verbunden</span>
             }
-            if (amount < 1 || amount > 500) {
-                showResult("batchMintResult", { title: "Anzahl muss zwischen 1 und 500 liegen." }, "error");
-                return;
-            }
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-            showPending("batchMintResult");
-            const tx = await contract.batchMintTicket(to, eventName, amount);
-            showPending("batchMintResult", "Warte auf Bestätigung");
-            const receipt = await tx.wait();
+/* ─── App root ─── */
+function App() {
+  const [role, setRole]               = useState("organizer");
+  const [walletConnected, setWalletConnected] = useState(false);
+  const [walletAddress, setWalletAddress]     = useState("");
+  const [isOwner, setIsOwner]                 = useState(false);
+  const contractRef = useRef(null);
 
-            const mintedEvents = receipt.events.filter(e => e.event === "TicketMinted");
-            const firstId = mintedEvents[0].args.tokenId.toNumber();
-            const lastId  = mintedEvents[mintedEvents.length - 1].args.tokenId.toNumber();
+  /* Handle ?id= — jump to door view */
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("id");
+    if (id) setRole("door");
+  }, []);
 
-            showResult("batchMintResult", {
-                title: `${amount} Tickets erstellt`,
-                fields: [
-                    ["Event",      eventName],
-                    ["Erste ID",   `#${firstId}`],
-                    ["Letzte ID",  `#${lastId}`],
-                    ["Anzahl",     String(amount)],
-                    ["Empfänger",  to,                      true],
-                    ["TX",         receipt.transactionHash, true],
-                ]
-            }, "success");
-        } catch (e) {
-            showResult("batchMintResult", { title: e.reason || e.message }, "error");
-        }
-    }
+  const connectWallet = async () => {
+    if (!window.ethereum) { alert("MetaMask nicht gefunden."); return; }
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    const signer = provider.getSigner();
+    const c      = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+    contractRef.current = c;
+    const address       = await signer.getAddress();
+    const contractOwner = await c.owner();
+    setWalletAddress(address);
+    setWalletConnected(true);
+    setIsOwner(address.toLowerCase() === contractOwner.toLowerCase());
+  };
 
-    async function transferTicket() {
-        try {
-            await ensureConnected();
-            const id = document.getElementById("transferId").value;
-            const to = document.getElementById("transferTo").value.trim();
-            if (!id || !to) { showResult("transferResult", { title: "Bitte alle Felder ausfüllen." }, "error"); return; }
+  return (
+    <div className="app">
+      <TopBar
+        role={role}
+        setRole={setRole}
+        walletConnected={walletConnected}
+        walletAddress={walletAddress}
+      />
+      <div className="main">
+        {role === "organizer" && (
+          <OrganizerView
+            walletConnected={walletConnected}
+            walletAddress={walletAddress}
+            isOwner={isOwner}
+            onConnect={connectWallet}
+            contractRef={contractRef}
+          />
+        )}
+        {role === "attendee" && (
+          <AttendeeView
+            walletConnected={walletConnected}
+            walletAddress={walletAddress}
+            onConnect={connectWallet}
+          />
+        )}
+        {role === "door" && (
+          <DoorView
+            onConnect={connectWallet}
+            contractRef={contractRef}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
 
-            showPending("transferResult");
-            const tx = await contract.transferTicket(id, to);
-            showPending("transferResult", "Warte auf Bestätigung");
-            const receipt = await tx.wait();
-
-            showResult("transferResult", {
-                title: `Ticket #${id} übertragen`,
-                fields: [
-                    ["Neuer Besitzer", to,                       true],
-                    ["TX",             receipt.transactionHash,  true],
-                ]
-            }, "success");
-        } catch (e) {
-            showResult("transferResult", { title: e.reason || e.message }, "error");
-        }
-    }
-
-    // ── Meine Tickets ───────────────────────────────────────
-
-    // Wrapper: Wallet verbinden + Tickets laden (für den Button im Connect-Prompt)
-    async function connectAndLoad() {
-        await connectWallet();
-        // connectWallet() ruft loadMyTickets() bereits auf falls View aktiv ist
-    }
-
-    // Dünner Wrapper: holt eigene Adresse und delegiert an loadTicketsForAddress()
-    async function loadMyTickets() {
-        const address = await signer.getAddress();
-        await loadTicketsForAddress(address);
-    }
-
-    // Manuelle Suche: liest Eingabefeld, validiert, delegiert
-    async function searchByAddress() {
-        const input = document.getElementById("ticketsSearchInput").value.trim();
-        if (!input.startsWith("0x") || input.length !== 42) {
-            document.getElementById("ticketsEmpty").textContent = "Bitte eine gültige Ethereum-Adresse eingeben (0x…, 42 Zeichen).";
-            document.getElementById("ticketsEmpty").style.display = "block";
-            document.getElementById("ticketsResultLabel").style.display = "none";
-            document.getElementById("ticketList").innerHTML = "";
-            return;
-        }
-        await loadTicketsForAddress(input);
-    }
-
-    // Kernlogik: Tickets für eine beliebige Adresse laden.
-    // Wird sowohl von loadMyTickets() als auch searchByAddress() genutzt.
-    async function loadTicketsForAddress(rawAddress) {
-        const userAddr = rawAddress.toLowerCase();
-        const rc = getReadContract();
-
-        // Ladezustand zeigen
-        document.getElementById("ticketsLoading").style.display = "flex";
-        document.getElementById("ticketList").innerHTML = "";
-        document.getElementById("ticketsEmpty").style.display = "none";
-        document.getElementById("ticketsResultLabel").style.display = "none";
-
-        try {
-            // ── Schritt 1: Alle TicketMinted- und TicketTransferred-Events laden ──
-            // queryFilter() fragt die Blockchain nach allen historischen Events dieses Contracts.
-            // Da die Parameter nicht "indexed" sind, können wir nicht on-chain filtern –
-            // wir laden alles und filtern client-seitig.
-            const mintedEvents   = await rc.queryFilter(rc.filters.TicketMinted());
-            const transferEvents = await rc.queryFilter(rc.filters.TicketTransferred());
-
-            // ── Schritt 2: Ownership ableiten ──
-            // Wir bauen ein Set der Token IDs die aktuell dieser Adresse gehören.
-            const owned = new Set();
-
-            for (const e of mintedEvents) {
-                if (e.args.to.toLowerCase() === userAddr) owned.add(e.args.tokenId.toString());
-            }
-
-            // Transfers sind bereits nach blockNumber sortiert da queryFilter so liefert.
-            for (const e of transferEvents) {
-                const id = e.args.tokenId.toString();
-                if (e.args.to.toLowerCase() === userAddr)   owned.add(id);
-                if (e.args.from.toLowerCase() === userAddr) owned.delete(id);
-            }
-
-            // Label mit gesuchter Adresse einblenden
-            document.getElementById("ticketsResultLabel").style.display = "block";
-            document.getElementById("ticketsResultAddr").textContent = shortAddr(rawAddress);
-
-            // ── Schritt 3: Für jede Token ID den aktuellen Status holen ──
-            const tokenIds = Array.from(owned);
-
-            if (tokenIds.length === 0) {
-                document.getElementById("ticketsLoading").style.display = "none";
-                document.getElementById("ticketsEmpty").style.display = "block";
-                document.getElementById("ticketsEmpty").textContent = "Keine Tickets gefunden für diese Adresse.";
-                return;
-            }
-
-            // Alle verifyTicket()-Calls parallel starten (Promise.all)
-            const results = await Promise.all(
-                tokenIds.map(id => rc.verifyTicket(id).then(r => ({ id, isValid: r[0], eventName: r[2] })))
-            );
-
-            // ── Schritt 4: Karten rendern ──
-            document.getElementById("ticketsLoading").style.display = "none";
-            const list = document.getElementById("ticketList");
-
-            for (const t of results) {
-                const card = document.createElement("div");
-                card.className = "ticket-card";
-                card.innerHTML = `
-                    <div class="ticket-card-left">
-                        <span class="ticket-id">Token #${t.id}</span>
-                        <span class="ticket-event">${t.eventName || '–'}</span>
-                    </div>
-                    <span class="ticket-badge ${t.isValid ? 'valid' : 'invalid'}">
-                        ${t.isValid ? 'Gültig' : 'Entwertet'}
-                    </span>
-                `;
-                list.appendChild(card);
-            }
-
-        } catch (e) {
-            document.getElementById("ticketsLoading").style.display = "none";
-            document.getElementById("ticketsEmpty").style.display = "block";
-            document.getElementById("ticketsEmpty").textContent = "Fehler: " + (e.reason || e.message);
-        }
-    }
-
-    // ── Türsteher-Aktionen ──────────────────────────────────
-
-    // Zeigt das große farbige Ergebnis-Banner für den Türsteher.
-    function showDoormanBanner(state, icon, statusText, statusClass, metaRows) {
-        const banner = document.getElementById("doormanBanner");
-        banner.className = `verify-banner ${state}`;
-        banner.style.display = "block";
-
-        let metaHtml = metaRows.map(([key, val, mono]) => `
-            <div class="verify-meta-row">
-                <span class="verify-meta-key">${key}</span>
-                <span class="verify-meta-val${mono ? " mono" : ""}">${val}</span>
-            </div>`).join("");
-
-        banner.innerHTML = `
-            <div class="verify-icon">${icon}</div>
-            <div class="verify-status-text ${statusClass}">${statusText}</div>
-            <div class="verify-meta">${metaHtml}</div>
-        `;
-    }
-
-    // Ticket prüfen – kein Wallet nötig (read-only).
-    async function doormanVerify() {
-        const id = document.getElementById("doormanId").value.trim();
-        if (!id) {
-            showDoormanBanner("checking", "·", "Token ID eingeben", "mid", []);
-            return;
-        }
-
-        // Ladeanzeige im Banner
-        showDoormanBanner("checking", "⟳", "Abfrage läuft…", "mid", []);
-        document.getElementById("doormanInvalidateBtn").style.display = "none";
-        document.getElementById("doormanInvalidateResult").style.display = "none";
-
-        try {
-            const rc = getReadContract();
-            const [isValid, currentOwner, eventName] = await rc.verifyTicket(id);
-
-            const nullAddr = "0x0000000000000000000000000000000000000000";
-            if (currentOwner === nullAddr) {
-                showDoormanBanner("invalid", "✕", "Ticket existiert nicht", "bad", [
-                    ["Token ID", `#${id}`],
-                ]);
-                return;
-            }
-
-            if (isValid) {
-                showDoormanBanner("valid", "✓", "GÜLTIG", "ok", [
-                    ["Token ID", `#${id}`],
-                    ["Event",    eventName],
-                    ["Besitzer", shortAddr(currentOwner), true],
-                ]);
-            } else {
-                showDoormanBanner("invalid", "✕", "ENTWERTET", "bad", [
-                    ["Token ID", `#${id}`],
-                    ["Event",    eventName],
-                    ["Besitzer", shortAddr(currentOwner), true],
-                ]);
-            }
-
-            // "Ticket entwerten"-Button einblenden (nur wenn Ticket existiert)
-            document.getElementById("doormanInvalidateBtn").style.display = "flex";
-
-        } catch (e) {
-            showDoormanBanner("invalid", "!", e.reason || e.message, "bad", []);
-        }
-    }
-
-    // Ticket entwerten – braucht Wallet (nur Owner).
-    async function doormanInvalidate() {
-        const id = document.getElementById("doormanId").value.trim();
-        if (!id) return;
-
-        try {
-            await ensureConnected();
-            showResult("doormanInvalidateResult", { title: "Transaktion wird gesendet…" }, "pending");
-            document.getElementById("doormanInvalidateResult").style.display = "block";
-
-            const tx = await contract.invalidateTicket(id);
-            showResult("doormanInvalidateResult", { title: "Warte auf Bestätigung…" }, "pending");
-            document.getElementById("doormanInvalidateResult").style.display = "block";
-            const receipt = await tx.wait();
-
-            showResult("doormanInvalidateResult", {
-                title: `Ticket #${id} entwertet`,
-                fields: [["TX", receipt.transactionHash, true]]
-            }, "success");
-
-            // Banner direkt aktualisieren
-            showDoormanBanner("invalid", "✕", "ENTWERTET", "bad", [
-                ["Token ID", `#${id}`],
-                ["Status",   "Soeben entwertet"],
-            ]);
-            document.getElementById("doormanInvalidateBtn").style.display = "none";
-
-        } catch (e) {
-            showResult("doormanInvalidateResult", { title: e.reason || e.message }, "error");
-            document.getElementById("doormanInvalidateResult").style.display = "block";
-        }
-    }
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 </script>
-
 </body>
 </html>
