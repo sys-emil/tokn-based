@@ -620,9 +620,6 @@ function OrganizerDashboard({ walletConnected, walletAddress, isOwner, onConnect
             <div className="kpi-label">Tickets geminted</div>
             <div className="kpi-value">{loading ? "–" : totalTickets}</div>
             <div className="kpi-delta muted">seit Deployment</div>
-            <div className="spark-pos">
-              <Spark data={[1, 2, 3, 4, 5, 6, 7, 8, 9, totalTickets || 10]} />
-            </div>
           </div>
           <div className="kpi">
             <div className="kpi-label">Eingecheckt</div>
