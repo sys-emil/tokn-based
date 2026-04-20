@@ -694,6 +694,26 @@
             <div id="mintQr" class="qr-box"></div>
         </section>
 
+        <!-- Batch Mint -->
+        <section class="section">
+            <div class="section-label">Veranstalter</div>
+            <div class="section-title">Batch Mint <span class="restricted-note">Nur Owner</span></div>
+            <div class="field">
+                <label>Empfänger-Adresse</label>
+                <input id="batchMintTo" class="mono" placeholder="0x..." />
+            </div>
+            <div class="field">
+                <label>Event Name</label>
+                <input id="batchEventName" placeholder="z.B. Konzert München · 12. Juli" />
+            </div>
+            <div class="field">
+                <label>Anzahl Tickets (1–500)</label>
+                <input id="batchAmount" type="number" min="1" max="500" placeholder="10" />
+            </div>
+            <button class="btn btn-primary" onclick="batchMintTickets()">Tickets erstellen</button>
+            <div id="batchMintResult" class="result"></div>
+        </section>
+
         <!-- Transfer -->
         <section class="section">
             <div class="section-label">Besitzer</div>
@@ -828,6 +848,7 @@
     const ABI = [
         {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"invalidateTicket","outputs":[],"stateMutability":"nonpayable","type":"function"},
         {"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"string","name":"eventName","type":"string"}],"name":"mintTicket","outputs":[],"stateMutability":"nonpayable","type":"function"},
+        {"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"string","name":"eventName","type":"string"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"batchMintTicket","outputs":[],"stateMutability":"nonpayable","type":"function"},
         {"inputs":[],"stateMutability":"nonpayable","type":"constructor"},
         {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"TicketInvalidated","type":"event"},
         {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"tokenId","type":"uint256"},{"indexed":false,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"string","name":"eventName","type":"string"}],"name":"TicketMinted","type":"event"},
@@ -1007,6 +1028,47 @@
             const qr = document.getElementById("mintQr");
             qr.classList.remove("visible");
             qr.innerHTML = "";
+        }
+    }
+
+    async function batchMintTickets() {
+        try {
+            await ensureConnected();
+            const to        = document.getElementById("batchMintTo").value.trim();
+            const eventName = document.getElementById("batchEventName").value.trim();
+            const amount    = parseInt(document.getElementById("batchAmount").value, 10);
+
+            if (!to || !eventName || !amount) {
+                showResult("batchMintResult", { title: "Bitte alle Felder ausfüllen." }, "error");
+                return;
+            }
+            if (amount < 1 || amount > 500) {
+                showResult("batchMintResult", { title: "Anzahl muss zwischen 1 und 500 liegen." }, "error");
+                return;
+            }
+
+            showPending("batchMintResult");
+            const tx = await contract.batchMintTicket(to, eventName, amount);
+            showPending("batchMintResult", "Warte auf Bestätigung");
+            const receipt = await tx.wait();
+
+            const mintedEvents = receipt.events.filter(e => e.event === "TicketMinted");
+            const firstId = mintedEvents[0].args.tokenId.toNumber();
+            const lastId  = mintedEvents[mintedEvents.length - 1].args.tokenId.toNumber();
+
+            showResult("batchMintResult", {
+                title: `${amount} Tickets erstellt`,
+                fields: [
+                    ["Event",      eventName],
+                    ["Erste ID",   `#${firstId}`],
+                    ["Letzte ID",  `#${lastId}`],
+                    ["Anzahl",     String(amount)],
+                    ["Empfänger",  to,                      true],
+                    ["TX",         receipt.transactionHash, true],
+                ]
+            }, "success");
+        } catch (e) {
+            showResult("batchMintResult", { title: e.reason || e.message }, "error");
         }
     }
 
