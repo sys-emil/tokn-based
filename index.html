@@ -964,7 +964,7 @@
         const el = document.getElementById(containerId);
         el.innerHTML = "";
         new QRCode(el, {
-            text:   '?id=' + tokenId,
+            text: 'https://sys-emil.github.io/tokn-based/?id=' + tokenId,
             width:  160,
             height: 160,
             colorDark:  "#111111",
@@ -972,7 +972,7 @@
         });
         const label = document.createElement('span');
         label.className = 'qr-label';
-        label.textContent = '?id=' + tokenId;
+        label.textContent = 'https://sys-emil.github.io/tokn-based/?id=' + tokenId;
         el.appendChild(label);
         el.classList.add('visible');
     }
