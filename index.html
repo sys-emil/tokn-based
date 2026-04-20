@@ -373,6 +373,43 @@ function getReadContract() {
 }
 
 /* ═══════════════════════════════════════════════════════
+   loadEvents()  —  single source of truth for dashboard data
+   Replace this function when the contract changes.
+   Returns: [{ name, totalTickets, checkedIn, validTickets }]
+═══════════════════════════════════════════════════════ */
+async function loadEvents() {
+  const rc = getReadContract();
+
+  /* 1. All TicketMinted events */
+  const mintedEvents = await rc.queryFilter(rc.filters.TicketMinted());
+
+  /* 2. All TicketInvalidated events → Set of invalidated token IDs */
+  const invalidatedEvents = await rc.queryFilter(rc.filters.TicketInvalidated());
+  const invalidatedIds = new Set(
+    invalidatedEvents.map(e => e.args.tokenId.toString())
+  );
+
+  /* 3. Group minted tickets by eventName */
+  const eventMap = new Map(); // eventName → Set<tokenId>
+  for (const e of mintedEvents) {
+    const name    = e.args.eventName;
+    const tokenId = e.args.tokenId.toString();
+    if (!eventMap.has(name)) eventMap.set(name, new Set());
+    eventMap.get(name).add(tokenId);
+  }
+
+  /* 4. Build result array */
+  const events = [];
+  for (const [name, tokenIds] of eventMap) {
+    const totalTickets = tokenIds.size;
+    const checkedIn    = [...tokenIds].filter(id => invalidatedIds.has(id)).length;
+    const validTickets = totalTickets - checkedIn;
+    events.push({ name, totalTickets, checkedIn, validTickets });
+  }
+  return events;
+}
+
+/* ═══════════════════════════════════════════════════════
    SHARED UI PRIMITIVES
 ═══════════════════════════════════════════════════════ */
 
@@ -476,6 +513,193 @@ function VerifyBanner({ banner }) {
         </div>
       )}
     </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   EVENT CARD  —  one card per unique eventName
+═══════════════════════════════════════════════════════ */
+function EventCard({ event }) {
+  const pct = event.totalTickets > 0
+    ? Math.round((event.checkedIn / event.totalTickets) * 100) : 0;
+  return (
+    <div className="card">
+      <div className="card-body">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+          <div style={{ minWidth: 0, flex: 1, marginRight: 20 }}>
+            <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: "-0.015em", marginBottom: 8, wordBreak: "break-word" }}>
+              {event.name}
+            </div>
+            <div className="row gap-2" style={{ flexWrap: "wrap" }}>
+              <span className="chip ok"><span className="d" />{event.validTickets} gültig</span>
+              <span className="chip bad"><span className="d" />{event.checkedIn} entwertet</span>
+              <span className="chip">{event.totalTickets} gesamt</span>
+            </div>
+          </div>
+          <div style={{ textAlign: "right", flexShrink: 0 }}>
+            <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
+              {pct}%
+            </div>
+            <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 3 }}>eingecheckt</div>
+          </div>
+        </div>
+        {/* Progress bar — inline styles only, no new CSS class */}
+        <div style={{ height: 6, background: "var(--surface-3)", borderRadius: 99, overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${pct}%`, background: "var(--accent)", borderRadius: 99, transition: "width 0.4s cubic-bezier(.4,0,.2,1)" }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   ORGANIZER DASHBOARD  (role="organizer")
+   Calls loadEvents() on mount — replace that function to
+   swap the data source without touching this component.
+═══════════════════════════════════════════════════════ */
+function OrganizerDashboard({ walletConnected, walletAddress, isOwner, onConnect, onMint }) {
+  const [events,  setEvents]  = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadErr, setLoadErr] = useState(null);
+
+  useEffect(() => {
+    setLoading(true);
+    setLoadErr(null);
+    loadEvents()
+      .then(evs  => { setEvents(evs);  setLoading(false); })
+      .catch(err => { setLoadErr(err.reason || err.message); setLoading(false); });
+  }, []);
+
+  const totalTickets   = events.reduce((s, e) => s + e.totalTickets, 0);
+  const totalCheckedIn = events.reduce((s, e) => s + e.checkedIn,    0);
+  const totalValid     = totalTickets - totalCheckedIn;
+
+  return (
+    <>
+      {/* ── Aurora backdrop ── */}
+      <div className="aurora" />
+
+      <div className="container">
+
+        {/* ── Hero ── */}
+        <div className="hero">
+          <div className="eyebrow">
+            <span className="pulse" />
+            Ethereum Sepolia · Live Blockchain-Daten
+          </div>
+          <h1>Veranstaltungen</h1>
+          <p className="lead">
+            Alle Events die auf dem Smart Contract geminted wurden — live von der Chain geladen.
+          </p>
+          <div className="row gap-3" style={{ marginTop: 22, flexWrap: "wrap" }}>
+            {!walletConnected ? (
+              <button className="btn primary lg" onClick={onConnect}>
+                <Icon name="wifi" size={15} /> Wallet verbinden
+              </button>
+            ) : (
+              <div className="row gap-2">
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--ok)", display: "inline-block", flexShrink: 0 }} />
+                <span style={{ fontFamily: "var(--mono)", fontSize: 13, color: "var(--ink-3)" }}>{walletAddress}</span>
+                {isOwner && <span className="chip ok"><span className="d" />Contract Owner</span>}
+              </div>
+            )}
+            <button className="btn ghost lg" onClick={onMint}>
+              <Icon name="plus" size={15} /> Event minten
+            </button>
+          </div>
+        </div>
+
+        {/* ── KPI strip ── */}
+        <div className="kpis">
+          <div className="kpi">
+            <div className="kpi-label">Veranstaltungen</div>
+            <div className="kpi-value">{loading ? "–" : events.length}</div>
+            <div className="kpi-delta muted">unique eventNames</div>
+          </div>
+          <div className="kpi">
+            <div className="kpi-label">Tickets geminted</div>
+            <div className="kpi-value">{loading ? "–" : totalTickets}</div>
+            <div className="kpi-delta muted">seit Deployment</div>
+            <div className="spark-pos">
+              <Spark data={[1, 2, 3, 4, 5, 6, 7, 8, 9, totalTickets || 10]} />
+            </div>
+          </div>
+          <div className="kpi">
+            <div className="kpi-label">Eingecheckt</div>
+            <div className="kpi-value">{loading ? "–" : totalCheckedIn}</div>
+            <div className="kpi-delta muted">entwertet</div>
+          </div>
+          <div className="kpi">
+            <div className="kpi-label">Noch gültig</div>
+            <div className="kpi-value">{loading ? "–" : totalValid}</div>
+            <div className={`kpi-delta${totalValid > 0 ? "" : " muted"}`}>
+              {loading ? "" : totalTickets > 0 ? `${Math.round((totalValid / totalTickets) * 100)}% verbleibend` : "—"}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Event list ── */}
+        <div className="section-head">
+          <div>
+            <h2>Events</h2>
+            <div className="sub">Gruppiert nach eventName auf der Blockchain</div>
+          </div>
+          <button className="btn ghost sm" onClick={() => {
+            setLoading(true); setLoadErr(null);
+            loadEvents().then(evs => { setEvents(evs); setLoading(false); }).catch(err => { setLoadErr(err.reason || err.message); setLoading(false); });
+          }}>
+            <Icon name="activity" size={13} /> Aktualisieren
+          </button>
+        </div>
+
+        {/* Loading state */}
+        {loading && (
+          <div className="card">
+            <div className="card-body" style={{ display: "flex", alignItems: "center", gap: 12, color: "var(--ink-3)", fontSize: 14 }}>
+              <span className="spinner" /> Events werden von der Blockchain geladen…
+            </div>
+          </div>
+        )}
+
+        {/* Error state */}
+        {!loading && loadErr && (
+          <div className="card">
+            <div className="card-body" style={{ color: "var(--bad)", fontSize: 13 }}>
+              <strong>Fehler beim Laden:</strong> {loadErr}
+            </div>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!loading && !loadErr && events.length === 0 && (
+          <div className="card">
+            <div className="card-body" style={{ textAlign: "center", padding: "40px 24px" }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: "var(--accent-wash)", border: "1px solid var(--accent-line)", display: "grid", placeItems: "center", margin: "0 auto 14px", color: "var(--accent)" }}>
+                <Icon name="ticket" size={20} strokeWidth={1.5} />
+              </div>
+              <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 6 }}>Noch keine Events</div>
+              <div style={{ color: "var(--ink-3)", fontSize: 13, marginBottom: 18 }}>
+                Minte das erste Ticket um ein Event zu erstellen.
+              </div>
+              <button className="btn primary" onClick={onMint}>
+                <Icon name="plus" size={14} /> Erstes Ticket minten
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Event cards */}
+        {!loading && !loadErr && events.map(ev => (
+          <EventCard key={ev.name} event={ev} />
+        ))}
+
+        <footer className="app-footer">
+          <span>Tokn Based · 2025</span>
+          <span>Sepolia Testnet</span>
+        </footer>
+
+      </div>
+    </>
   );
 }
 
@@ -1198,14 +1422,14 @@ function TopBar({ role, setRole, walletConnected, walletAddress }) {
           <b>Tokn</b><span>Based</span>
         </div>
 
-        {/* Role switcher — 4 tabs */}
+        {/* Primary role switcher — Dashboard + 3 user-facing views */}
         <div className="role-switcher" role="tablist" aria-label="Ansicht wählen">
           <button
-            className={role === "mint" ? "active" : ""}
-            onClick={() => setRole("mint")}
-            aria-selected={role === "mint"}
+            className={role === "organizer" ? "active" : ""}
+            onClick={() => setRole("organizer")}
+            aria-selected={role === "organizer"}
           >
-            <span className="dot" /><Icon name="ticket" size={12} strokeWidth={2} /> Mint
+            <span className="dot" /><Icon name="layers" size={12} strokeWidth={2} /> Dashboard
           </button>
           <button
             className={role === "attendee" ? "active" : ""}
@@ -1230,6 +1454,15 @@ function TopBar({ role, setRole, walletConnected, walletAddress }) {
           </button>
         </div>
 
+        {/* Secondary: Mint action — ghost normally, primary when active */}
+        <button
+          className={`btn sm${role === "mint" ? " primary" : " ghost"}`}
+          style={{ flexShrink: 0 }}
+          onClick={() => setRole("mint")}
+        >
+          <Icon name="plus" size={13} strokeWidth={2.2} /> Mint
+        </button>
+
         {/* Wallet status */}
         <div className="wallet-status">
           <span className={`wallet-dot${walletConnected ? " on" : ""}`} />
@@ -1248,7 +1481,7 @@ function TopBar({ role, setRole, walletConnected, walletAddress }) {
    APP ROOT
 ═══════════════════════════════════════════════════════ */
 function App() {
-  const [role,            setRole]            = useState("mint");
+  const [role,            setRole]            = useState("organizer");
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletAddress,   setWalletAddress]   = useState("");
   const [isOwner,         setIsOwner]         = useState(false);
@@ -1283,6 +1516,15 @@ function App() {
         walletAddress={walletAddress}
       />
       <div className="main">
+        {role === "organizer" && (
+          <OrganizerDashboard
+            walletConnected={walletConnected}
+            walletAddress={walletAddress}
+            isOwner={isOwner}
+            onConnect={connectWallet}
+            onMint={() => setRole("mint")}
+          />
+        )}
         {role === "mint"     && (
           <MintView
             walletConnected={walletConnected}
