@@ -312,7 +312,7 @@ section + section { margin-top: 0; }
 .qr-label { font-family: var(--mono); font-size: 11px; color: var(--ink-3); text-align: center; word-break: break-all; }
 
 /* ── Verify banner (Türsteher + Verifizieren) ──────── */
-.verify-banner { margin-top: 16px; border-radius: 14px; padding: 48px 24px 32px; text-align: center; animation: fadeIn 0.25s cubic-bezier(0.2, 0, 0, 1); }
+.verify-banner { margin-top: 16px; border-radius: 14px; padding: 48px 24px 32px; text-align: center; animation: bannerEnter 0.3s cubic-bezier(0.25, 1, 0.5, 1); }
 .verify-banner.valid    { background: var(--ok-wash);   border: 2px solid var(--ok); }
 .verify-banner.invalid  { background: var(--bad-wash);  border: 2px solid var(--bad); }
 .verify-banner.checking { background: var(--surface-2); border: 2px solid var(--line-2); }
@@ -343,6 +343,40 @@ section + section { margin-top: 0; }
 
 /* ── Footer ────────────────────────────────────────── */
 .app-footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-3); }
+
+/* ── Sliding role indicator ─────────────────────────── */
+.role-switcher { position: relative; }
+.role-indicator {
+  position: absolute;
+  top: 3px; bottom: 3px; left: 0;
+  background: var(--surface);
+  border-radius: 7px;
+  box-shadow: 0 1px 2px rgba(17,20,45,0.06), 0 0 0 1px var(--line);
+  pointer-events: none;
+  z-index: 0;
+  will-change: transform;
+  transition: transform 280ms cubic-bezier(0.25, 1, 0.5, 1), width 280ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+.role-switcher button { position: relative; z-index: 1; }
+.role-switcher button.active { background: transparent; color: var(--ink); box-shadow: none; }
+
+/* ── Card hover lift ────────────────────────────────── */
+.card-lift {
+  transition: transform 220ms cubic-bezier(0.25, 1, 0.5, 1), box-shadow 220ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+.card-lift:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+
+/* ── Banner scale entrance ──────────────────────────── */
+@keyframes bannerEnter {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ── Ticket row stagger ─────────────────────────────── */
+@keyframes ticketIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
 /* ── Mobile adaptations (≤640px) ───────────────────── */
 @media (max-width: 640px) {
@@ -421,6 +455,12 @@ section + section { margin-top: 0; }
 
   /* Hide footer — reclaim screen real estate on mobile */
   .app-footer { display: none; }
+
+  /* Sliding indicator is desktop-only */
+  .role-indicator { display: none; }
+
+  /* Restore active state visuals on mobile (no indicator) */
+  .role-switcher button.active { color: var(--accent); background: var(--accent-wash); }
 }
 
 /* ── Reduced motion ─────────────────────────────────── */
@@ -437,7 +477,7 @@ section + section { margin-top: 0; }
 <body>
 <div id="root"></div>
 <script type="text/babel" data-presets="env,react">
-const { useState, useEffect, useRef, useMemo } = React;
+const { useState, useEffect, useLayoutEffect, useRef, useMemo } = React;
 
 /* ═══════════════════════════════════════════════════════
    CONTRACT  —  do not modify
@@ -595,7 +635,7 @@ function QRCodeBox({ tokenId }) {
 function VerifyBanner({ banner }) {
   if (!banner) return null;
   return (
-    <div className={`verify-banner ${banner.state}`}>
+    <div key={banner.state} className={`verify-banner ${banner.state}`}>
       <div className="verify-icon">{banner.icon}</div>
       <div className={`verify-status ${banner.cls}`}>{banner.text}</div>
       {banner.meta && banner.meta.length > 0 && (
@@ -619,7 +659,7 @@ function EventCard({ event }) {
   const pct = event.totalTickets > 0
     ? Math.round((event.checkedIn / event.totalTickets) * 100) : 0;
   return (
-    <div className="card">
+    <div className="card card-lift">
       <div className="card-body">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
           <div style={{ minWidth: 0, flex: 1, marginRight: 20 }}>
@@ -1273,6 +1313,8 @@ function AttendeeView({ walletConnected, walletAddress, onConnect }) {
                 display: "flex", justifyContent: "space-between", alignItems: "center",
                 padding: "16px 20px",
                 borderTop: i === 0 ? "none" : "1px solid var(--line)",
+                animation: "ticketIn 0.3s cubic-bezier(0.2, 0, 0, 1) both",
+                animationDelay: `${i * 80}ms`,
               }}>
                 <div>
                   <div style={{ fontSize: 11, fontFamily: "var(--mono)", color: "var(--ink-3)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 3 }}>
@@ -1511,6 +1553,15 @@ function DoorView({ onConnect, contractRef }) {
    TOP BAR — Logo-mark + 4-tab Role Switcher + Wallet status
 ═══════════════════════════════════════════════════════ */
 function TopBar({ role, setRole, walletConnected, walletAddress }) {
+  const switcherRef = useRef(null);
+  const [indicatorStyle, setIndicatorStyle] = useState({});
+
+  useLayoutEffect(() => {
+    const el = switcherRef.current?.querySelector(`[data-role="${role}"]`);
+    if (!el) return;
+    setIndicatorStyle({ transform: `translateX(${el.offsetLeft}px)`, width: el.offsetWidth });
+  }, [role]);
+
   return (
     <div className="topbar">
       <div className="topbar-inner">
@@ -1522,8 +1573,10 @@ function TopBar({ role, setRole, walletConnected, walletAddress }) {
         </div>
 
         {/* Primary role switcher — Dashboard + 3 user-facing views */}
-        <div className="role-switcher" role="tablist" aria-label="Ansicht wählen">
+        <div className="role-switcher" ref={switcherRef} role="tablist" aria-label="Ansicht wählen">
+          <span className="role-indicator" style={indicatorStyle} aria-hidden="true" />
           <button
+            data-role="organizer"
             className={role === "organizer" ? "active" : ""}
             onClick={() => setRole("organizer")}
             aria-selected={role === "organizer"}
@@ -1531,6 +1584,7 @@ function TopBar({ role, setRole, walletConnected, walletAddress }) {
             <span className="dot" /><Icon name="layers" size={12} strokeWidth={2} /> Dashboard
           </button>
           <button
+            data-role="attendee"
             className={role === "attendee" ? "active" : ""}
             onClick={() => setRole("attendee")}
             aria-selected={role === "attendee"}
@@ -1538,6 +1592,7 @@ function TopBar({ role, setRole, walletConnected, walletAddress }) {
             <span className="dot" /><Icon name="users" size={12} strokeWidth={2} /> Meine Tickets
           </button>
           <button
+            data-role="verify"
             className={role === "verify" ? "active" : ""}
             onClick={() => setRole("verify")}
             aria-selected={role === "verify"}
@@ -1545,6 +1600,7 @@ function TopBar({ role, setRole, walletConnected, walletAddress }) {
             <span className="dot" /><Icon name="scan" size={12} strokeWidth={2} /> Verifizieren
           </button>
           <button
+            data-role="door"
             className={role === "door" ? "active" : ""}
             onClick={() => setRole("door")}
             aria-selected={role === "door"}
