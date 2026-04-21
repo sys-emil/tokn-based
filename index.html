@@ -568,7 +568,7 @@ const shortAddr = (a) => a.slice(0, 6) + "…" + a.slice(-4);
 function getReadContract() {
   const provider = window.ethereum
     ? new ethers.providers.Web3Provider(window.ethereum)
-    : new ethers.providers.JsonRpcProvider("https://rpc2.sepolia.org");
+    : new ethers.providers.JsonRpcProvider("https://ethereum-sepolia-rpc.publicnode.com");
   return new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
 }
 
