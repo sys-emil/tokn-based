@@ -130,14 +130,15 @@ a { color: inherit; text-decoration: none; }
 .role-switcher button {
   padding: 6px 11px; font-size: 12px; font-weight: 500; color: var(--ink-3);
   border-radius: 7px; display: inline-flex; align-items: center; gap: 5px;
-  transition: all 0.15s; white-space: nowrap;
+  transition: background 200ms ease, color 180ms ease, box-shadow 220ms ease;
+  white-space: nowrap;
 }
 .role-switcher button.active {
   background: var(--surface); color: var(--ink);
   box-shadow: 0 1px 2px rgba(17,20,45,0.06), 0 0 0 1px var(--line);
 }
-.role-switcher .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-4); flex-shrink: 0; }
-.role-switcher button.active .dot { background: var(--accent); }
+.role-switcher .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-4); flex-shrink: 0; transition: background 200ms ease, transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+.role-switcher button.active .dot { background: var(--accent); transform: scale(1.3); }
 
 /* Wallet status */
 .wallet-status { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-3); flex-shrink: 0; margin-left: 14px; }
@@ -150,7 +151,7 @@ a { color: inherit; text-decoration: none; }
 .container-narrow { max-width: 680px; margin: 0 auto; padding: 40px 24px 96px; position: relative; z-index: 1; }
 
 /* ── Hero ──────────────────────────────────────────── */
-.hero { position: relative; padding: 48px 0 36px; margin-bottom: 28px; }
+.hero { position: relative; padding: 48px 0 32px; margin-bottom: 32px; }
 .hero h1 { font-size: 40px; letter-spacing: -0.035em; font-weight: 600; line-height: 1.05; }
 .hero .eyebrow {
   display: inline-flex; align-items: center; gap: 8px;
@@ -175,10 +176,10 @@ a { color: inherit; text-decoration: none; }
   background: var(--surface);
   border: 1px solid var(--line); border-radius: var(--radius-lg);
   overflow: hidden; box-shadow: var(--shadow);
-  margin-bottom: 36px;
+  margin-bottom: 32px;
 }
 .kpi {
-  padding: 20px 22px; border-right: 1px solid var(--line);
+  padding: 20px 24px; border-right: 1px solid var(--line);
   display: flex; flex-direction: column; gap: 6px; position: relative;
 }
 .kpi:last-child { border-right: none; }
@@ -202,10 +203,12 @@ a { color: inherit; text-decoration: none; }
 /* ── Buttons ───────────────────────────────────────── */
 .btn {
   display: inline-flex; align-items: center; gap: 8px;
-  padding: 9px 14px; border-radius: 8px;
+  padding: 8px 14px; border-radius: 8px;
   font-size: 13.5px; font-weight: 500; letter-spacing: -0.005em;
-  border: 1px solid transparent; transition: all 0.15s; white-space: nowrap;
+  border: 1px solid transparent; white-space: nowrap;
+  transition: background 200ms ease, color 180ms ease, border-color 180ms ease, box-shadow 220ms ease, opacity 150ms, transform 120ms;
 }
+.btn:active:not(:disabled) { transform: scale(0.97); }
 .btn.primary {
   background: var(--accent); color: white;
   box-shadow: 0 1px 0 rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.18),
@@ -220,16 +223,16 @@ a { color: inherit; text-decoration: none; }
 .btn.subtle { color: var(--ink-3); }
 .btn.subtle:hover { color: var(--ink); background: var(--surface-2); }
 .btn.sm  { padding: 6px 10px; font-size: 12.5px; }
-.btn.lg  { padding: 12px 18px; font-size: 14.5px; border-radius: 10px; }
+.btn.lg  { padding: 12px 20px; font-size: 14.5px; border-radius: 10px; }
 .btn-full { width: 100%; justify-content: center; }
 
 /* ── Card ──────────────────────────────────────────── */
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
 .card + .card { margin-top: 20px; }
-.card-header { padding: 18px 22px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.card-header { padding: 16px 24px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .card-header h3 { font-size: 14.5px; font-weight: 600; letter-spacing: -0.01em; }
 .card-header .sub { font-size: 12.5px; color: var(--ink-3); margin-top: 2px; }
-.card-body { padding: 22px; }
+.card-body { padding: 24px; }
 
 /* ── Chips ─────────────────────────────────────────── */
 .chip {
@@ -246,7 +249,7 @@ a { color: inherit; text-decoration: none; }
 .chip.accent .d { background: var(--accent); }
 
 /* ── Forms ─────────────────────────────────────────── */
-.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
 .field:last-of-type { margin-bottom: 0; }
 .field label { font-size: 12.5px; font-weight: 500; color: var(--ink-2); }
 .input {
@@ -265,7 +268,7 @@ input[type=number] { -moz-appearance: textfield; }
 /* ── Mobile canvas ─────────────────────────────────── */
 .mobile-canvas {
   min-height: calc(100vh - 60px);
-  padding: 48px 20px 80px;
+  padding: 48px 16px 80px;
   background: radial-gradient(1000px 500px at 50% -10%, var(--accent-wash), transparent 60%), var(--surface-2);
 }
 .mobile-inner { max-width: 560px; margin: 0 auto; }
@@ -278,7 +281,7 @@ input[type=number] { -moz-appearance: textfield; }
 section + section { margin-top: 0; }
 
 /* ── Animations ────────────────────────────────────── */
-@keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes spin   { to { transform: rotate(360deg); } }
 
 /* ── Spinner ───────────────────────────────────────── */
@@ -290,7 +293,7 @@ section + section { margin-top: 0; }
 }
 
 /* ── Result box ────────────────────────────────────── */
-.result-box { margin-top: 14px; padding: 13px 16px; border-radius: 10px; font-size: 13px; line-height: 1.6; animation: fadeIn 0.15s ease; }
+.result-box { margin-top: 16px; padding: 12px 16px; border-radius: 10px; font-size: 13px; line-height: 1.6; animation: fadeIn 0.22s cubic-bezier(0.2, 0, 0, 1); }
 .result-box.success { background: var(--ok-wash);  border: 1px solid oklch(0.86 0.08 150); }
 .result-box.error   { background: var(--bad-wash); border: 1px solid oklch(0.86 0.10 25); }
 .result-box.pending { background: var(--surface-2); border: 1px solid var(--line-2); }
@@ -298,18 +301,18 @@ section + section { margin-top: 0; }
 .result-box.success .r-title { color: oklch(0.38 0.12 150); }
 .result-box.error   .r-title { color: oklch(0.38 0.14 25); }
 .result-box.pending .r-title { color: var(--ink-3); }
-.result-box .r-row  { display: flex; gap: 8px; margin-top: 3px; font-size: 12.5px; }
+.result-box .r-row  { display: flex; gap: 8px; margin-top: 4px; font-size: 12.5px; }
 .result-box .r-key  { color: var(--ink-3); width: 88px; flex-shrink: 0; }
 .result-box .r-val  { color: var(--ink); word-break: break-all; }
 .result-box .r-mono { font-family: var(--mono); font-size: 11.5px; }
 
 /* ── QR box ────────────────────────────────────────── */
-.qr-wrap { margin-top: 16px; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); display: flex; flex-direction: column; align-items: center; gap: 10px; animation: fadeIn 0.2s ease; }
+.qr-wrap { margin-top: 16px; padding: 24px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); display: flex; flex-direction: column; align-items: center; gap: 12px; animation: fadeIn 0.22s cubic-bezier(0.2, 0, 0, 1); }
 .qr-wrap canvas, .qr-wrap img { display: block; border-radius: 4px; }
 .qr-label { font-family: var(--mono); font-size: 11px; color: var(--ink-3); text-align: center; word-break: break-all; }
 
 /* ── Verify banner (Türsteher + Verifizieren) ──────── */
-.verify-banner { margin-top: 16px; border-radius: 14px; padding: 44px 24px 36px; text-align: center; animation: fadeIn 0.2s ease; }
+.verify-banner { margin-top: 16px; border-radius: 14px; padding: 48px 24px 32px; text-align: center; animation: fadeIn 0.25s cubic-bezier(0.2, 0, 0, 1); }
 .verify-banner.valid    { background: var(--ok-wash);   border: 2px solid var(--ok); }
 .verify-banner.invalid  { background: var(--bad-wash);  border: 2px solid var(--bad); }
 .verify-banner.checking { background: var(--surface-2); border: 2px solid var(--line-2); }
@@ -339,7 +342,7 @@ section + section { margin-top: 0; }
 .doorman-input::-webkit-inner-spin-button { -webkit-appearance: none; }
 
 /* ── Footer ────────────────────────────────────────── */
-.app-footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-3); }
+.app-footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-3); }
 
 /* ── Mobile adaptations (≤640px) ───────────────────── */
 @media (max-width: 640px) {
@@ -415,6 +418,19 @@ section + section { margin-top: 0; }
 
   /* Doorman action buttons: 48px+ touch targets */
   .doorman-btn { padding: 16px 14px !important; font-size: 15.5px; }
+
+  /* Hide footer — reclaim screen real estate on mobile */
+  .app-footer { display: none; }
+}
+
+/* ── Reduced motion ─────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .aurora { opacity: 0; }
 }
 </style>
 </head>
@@ -605,7 +621,7 @@ function EventCard({ event }) {
   return (
     <div className="card">
       <div className="card-body">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
           <div style={{ minWidth: 0, flex: 1, marginRight: 20 }}>
             <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: "-0.015em", marginBottom: 8, wordBreak: "break-word" }}>
               {event.name}
@@ -750,8 +766,8 @@ function OrganizerDashboard({ walletConnected, walletAddress, isOwner, onConnect
         {/* Empty state */}
         {!loading && !loadErr && events.length === 0 && (
           <div className="card">
-            <div className="card-body" style={{ textAlign: "center", padding: "40px 24px" }}>
-              <div style={{ width: 44, height: 44, borderRadius: 12, background: "var(--accent-wash)", border: "1px solid var(--accent-line)", display: "grid", placeItems: "center", margin: "0 auto 14px", color: "var(--accent)" }}>
+            <div className="card-body" style={{ textAlign: "center", padding: "48px 24px" }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: "var(--accent-wash)", border: "1px solid var(--accent-line)", display: "grid", placeItems: "center", margin: "0 auto 16px", color: "var(--accent)" }}>
                 <Icon name="ticket" size={20} strokeWidth={1.5} />
               </div>
               <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 6 }}>Noch keine Events</div>
@@ -1046,7 +1062,7 @@ function MintView({ walletConnected, walletAddress, isOwner, onConnect, contract
         </div>
 
         {/* ── Section: Transfer ── */}
-        <div className="section-head" style={{ marginTop: 36 }}>
+        <div className="section-head" style={{ marginTop: 32 }}>
           <div>
             <h2>Ticket übertragen</h2>
             <div className="sub">Token an eine andere Wallet-Adresse senden</div>
@@ -1225,8 +1241,10 @@ function AttendeeView({ walletConnected, walletAddress, onConnect }) {
 
         {/* Loading */}
         {loading && (
-          <div className="row gap-2" style={{ padding: "24px 0", color: "var(--ink-3)", fontSize: 14 }}>
-            <span className="spinner" /> Tickets werden geladen…
+          <div className="card" style={{ marginTop: 20 }}>
+            <div className="card-body" style={{ display: "flex", alignItems: "center", gap: 12, color: "var(--ink-3)", fontSize: 14 }}>
+              <span className="spinner" /> Tickets werden geladen…
+            </div>
           </div>
         )}
 
@@ -1237,10 +1255,13 @@ function AttendeeView({ walletConnected, walletAddress, onConnect }) {
           </div>
         )}
 
-        {/* Empty state */}
+        {/* Empty / error state */}
         {emptyMsg && !loading && (
-          <div style={{ padding: "32px 0", textAlign: "center", color: "var(--ink-3)", fontSize: 14 }}>
-            {emptyMsg}
+          <div className={`result-box ${emptyMsg.startsWith("Keine") ? "pending" : "error"}`} style={{ marginTop: resultAddr ? 0 : 20 }}>
+            <div className="r-title">
+              {emptyMsg.startsWith("Keine") ? "·" : "✕"}
+              <span>{emptyMsg}</span>
+            </div>
           </div>
         )}
 
