@@ -739,7 +739,11 @@ function OrganizerDashboard({ walletConnected, walletAddress, isOwner, onConnect
     if (prefersReduced) {
       heroEls.forEach(el => { el.classList.remove('reveal-hidden'); el.classList.add('reveal-visible'); });
     } else {
-      requestAnimationFrame(() => heroEls.forEach(el => el.classList.add('reveal-visible')));
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() =>
+          heroEls.forEach(el => el.classList.add('reveal-visible'))
+        )
+      );
     }
   }, []);
 
