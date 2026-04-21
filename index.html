@@ -992,6 +992,7 @@ function MintView({ walletConnected, walletAddress, isOwner, onConnect, contract
       }
       setMintQrId(null);
       setMintResult({ type: "pending", title: "Transaktion wird gesendet…" });
+      focusMetaMask();
       const tx = await c.mintTicket(mintTo.trim(), mintEvent.trim());
       setMintResult({ type: "pending", title: "Warte auf Bestätigung…" });
       const receipt  = await tx.wait();
@@ -1029,6 +1030,7 @@ function MintView({ walletConnected, walletAddress, isOwner, onConnect, contract
         return;
       }
       setBatchResult({ type: "pending", title: "Transaktion wird gesendet…" });
+      focusMetaMask();
       const tx = await c.batchMintTicket(batchTo.trim(), batchEvent.trim(), amount);
       setBatchResult({ type: "pending", title: "Warte auf Bestätigung…" });
       const receipt = await tx.wait();
@@ -1064,6 +1066,7 @@ function MintView({ walletConnected, walletAddress, isOwner, onConnect, contract
         return;
       }
       setXfrResult({ type: "pending", title: "Transaktion wird gesendet…" });
+      focusMetaMask();
       const tx = await c.transferTicket(xfrId, xfrTo.trim());
       setXfrResult({ type: "pending", title: "Warte auf Bestätigung…" });
       const receipt = await tx.wait();
@@ -1583,6 +1586,7 @@ function DoorView({ onConnect, contractRef }) {
       if (!contractRef.current) await onConnect();
       const c = contractRef.current;
       setInvalidateResult({ type: "pending", title: "Transaktion wird gesendet…" });
+      focusMetaMask();
       const tx = await c.invalidateTicket(id);
       setInvalidateResult({ type: "pending", title: "Warte auf Bestätigung…" });
       const receipt = await tx.wait();
@@ -1861,6 +1865,11 @@ function App() {
     const id = new URLSearchParams(window.location.search).get("id");
     if (id) setRole("door");
   }, []);
+
+function focusMetaMask() {
+  window.open('', '_self');
+  window.focus();
+}
 
   async function connectWallet() {
     if (!window.ethereum) { alert("MetaMask nicht gefunden."); return; }
