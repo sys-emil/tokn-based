@@ -378,6 +378,24 @@ section + section { margin-top: 0; }
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ── Dashboard entrance reveal system ───────────────── */
+.reveal-hidden {
+  opacity: 0;
+  transform: translateY(var(--ry, 18px));
+  filter: blur(var(--rb, 0px));
+}
+@keyframes revealUp {
+  from { opacity: 0; transform: translateY(var(--ry, 18px)); filter: blur(var(--rb, 0px)); }
+  to   { opacity: 1; transform: translateY(0);               filter: blur(0); }
+}
+.reveal-visible {
+  animation: revealUp var(--rd, 0.5s) cubic-bezier(0.22, 1, 0.36, 1) var(--delay, 0ms) both;
+}
+/* After reveal completes, restore card-lift hover transition */
+.card-lift.reveal-visible {
+  transition: transform 220ms cubic-bezier(0.25, 1, 0.5, 1), box-shadow 220ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
 /* ── Mobile adaptations (≤640px) ───────────────────── */
 @media (max-width: 640px) {
 
@@ -471,6 +489,8 @@ section + section { margin-top: 0; }
     transition-duration: 0.01ms !important;
   }
   .aurora { opacity: 0; }
+  .reveal-hidden { opacity: 1 !important; transform: none !important; filter: none !important; }
+  .reveal-visible { animation: none !important; }
 }
 </style>
 </head>
@@ -655,11 +675,13 @@ function VerifyBanner({ banner }) {
 /* ═══════════════════════════════════════════════════════
    EVENT CARD  —  one card per unique eventName
 ═══════════════════════════════════════════════════════ */
-function EventCard({ event }) {
+function EventCard({ event, revealIndex = 0 }) {
   const pct = event.totalTickets > 0
     ? Math.round((event.checkedIn / event.totalTickets) * 100) : 0;
   return (
-    <div className="card card-lift">
+    <div className="card card-lift reveal-hidden"
+         data-enter="scroll"
+         style={{ "--ry": "24px", "--rb": "6px", "--rd": "0.45s", "--delay": `${revealIndex * 80}ms` }}>
       <div className="card-body">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
           <div style={{ minWidth: 0, flex: 1, marginRight: 20 }}>
@@ -697,6 +719,8 @@ function OrganizerDashboard({ walletConnected, walletAddress, isOwner, onConnect
   const [events,  setEvents]  = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadErr, setLoadErr] = useState(null);
+  const containerRef = useRef(null);
+  const hasAnimated  = useRef(false);
 
   useEffect(() => {
     setLoading(true);
@@ -705,6 +729,42 @@ function OrganizerDashboard({ walletConnected, walletAddress, isOwner, onConnect
       .then(evs  => { setEvents(evs);  setLoading(false); })
       .catch(err => { setLoadErr(err.reason || err.message); setLoading(false); });
   }, []);
+
+  /* Hero + KPI entrance — fires once on first mount */
+  useEffect(() => {
+    if (hasAnimated.current || !containerRef.current) return;
+    hasAnimated.current = true;
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const heroEls = containerRef.current.querySelectorAll('[data-enter="hero"]');
+    if (prefersReduced) {
+      heroEls.forEach(el => { el.classList.remove('reveal-hidden'); el.classList.add('reveal-visible'); });
+    } else {
+      requestAnimationFrame(() => heroEls.forEach(el => el.classList.add('reveal-visible')));
+    }
+  }, []);
+
+  /* Scroll-triggered reveals for section-head + EventCards */
+  useEffect(() => {
+    if (loading || !containerRef.current) return;
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const scrollEls = containerRef.current.querySelectorAll('[data-enter="scroll"]');
+    if (!scrollEls.length) return;
+    if (prefersReduced) {
+      scrollEls.forEach(el => { el.classList.remove('reveal-hidden'); el.classList.add('reveal-visible'); });
+      return;
+    }
+    const observer = new IntersectionObserver(
+      entries => entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('reveal-visible');
+          observer.unobserve(entry.target);
+        }
+      }),
+      { threshold: 0.15 }
+    );
+    scrollEls.forEach(el => observer.observe(el));
+    return () => observer.disconnect();
+  }, [loading]);
 
   const totalTickets   = events.reduce((s, e) => s + e.totalTickets, 0);
   const totalCheckedIn = events.reduce((s, e) => s + e.checkedIn,    0);
@@ -715,19 +775,20 @@ function OrganizerDashboard({ walletConnected, walletAddress, isOwner, onConnect
       {/* ── Aurora backdrop ── */}
       <div className="aurora" />
 
-      <div className="container">
+      <div className="container" ref={containerRef}>
 
         {/* ── Hero ── */}
         <div className="hero">
-          <div className="eyebrow">
+          <div className="eyebrow reveal-hidden" data-enter="hero" style={{ "--delay": "0ms" }}>
             <span className="pulse" />
             Ethereum Sepolia · Live Blockchain-Daten
           </div>
-          <h1>Veranstaltungen</h1>
-          <p className="lead">
+          <h1 className="reveal-hidden" data-enter="hero" style={{ "--delay": "80ms" }}>Veranstaltungen</h1>
+          <p className="lead reveal-hidden" data-enter="hero" style={{ "--delay": "160ms" }}>
             Alle Events die auf dem Smart Contract geminted wurden — live von der Chain geladen.
           </p>
-          <div className="row gap-3" style={{ marginTop: 22, flexWrap: "wrap" }}>
+          <div className="row gap-3 reveal-hidden" data-enter="hero"
+               style={{ marginTop: 22, flexWrap: "wrap", "--delay": "220ms" }}>
             {!walletConnected ? (
               <button className="btn primary lg" onClick={onConnect}>
                 <Icon name="wifi" size={15} /> Wallet verbinden
@@ -745,24 +806,24 @@ function OrganizerDashboard({ walletConnected, walletAddress, isOwner, onConnect
           </div>
         </div>
 
-        {/* ── KPI strip ── */}
+        {/* ── KPI strip ── KPIs use negative Y (slide from above) to avoid overflow:hidden clipping */}
         <div className="kpis">
-          <div className="kpi">
+          <div className="kpi reveal-hidden" data-enter="hero" style={{ "--ry": "-12px", "--delay": "300ms" }}>
             <div className="kpi-label">Veranstaltungen</div>
             <div className="kpi-value">{loading ? "–" : events.length}</div>
             <div className="kpi-delta muted">unique eventNames</div>
           </div>
-          <div className="kpi">
+          <div className="kpi reveal-hidden" data-enter="hero" style={{ "--ry": "-12px", "--delay": "360ms" }}>
             <div className="kpi-label">Tickets geminted</div>
             <div className="kpi-value">{loading ? "–" : totalTickets}</div>
             <div className="kpi-delta muted">seit Deployment</div>
           </div>
-          <div className="kpi">
+          <div className="kpi reveal-hidden" data-enter="hero" style={{ "--ry": "-12px", "--delay": "420ms" }}>
             <div className="kpi-label">Eingecheckt</div>
             <div className="kpi-value">{loading ? "–" : totalCheckedIn}</div>
             <div className="kpi-delta muted">entwertet</div>
           </div>
-          <div className="kpi">
+          <div className="kpi reveal-hidden" data-enter="hero" style={{ "--ry": "-12px", "--delay": "480ms" }}>
             <div className="kpi-label">Noch gültig</div>
             <div className="kpi-value">{loading ? "–" : totalValid}</div>
             <div className={`kpi-delta${totalValid > 0 ? "" : " muted"}`}>
@@ -772,7 +833,7 @@ function OrganizerDashboard({ walletConnected, walletAddress, isOwner, onConnect
         </div>
 
         {/* ── Event list ── */}
-        <div className="section-head">
+        <div className="section-head reveal-hidden" data-enter="scroll" style={{ "--ry": "12px" }}>
           <div>
             <h2>Events</h2>
             <div className="sub">Gruppiert nach eventName auf der Blockchain</div>
@@ -822,8 +883,8 @@ function OrganizerDashboard({ walletConnected, walletAddress, isOwner, onConnect
         )}
 
         {/* Event cards */}
-        {!loading && !loadErr && events.map(ev => (
-          <EventCard key={ev.name} event={ev} />
+        {!loading && !loadErr && events.map((ev, i) => (
+          <EventCard key={ev.name} event={ev} revealIndex={i} />
         ))}
 
         <footer className="app-footer">
